@@ -17,5 +17,5 @@ samples, guidance on mobile development, and a full API reference.
 
 ## Thanks
 Thanks to @emingenc for the 2 repos that helped me to get the bluetooth working
-https://github.com/emingenc/even_glasses
-https://github.com/emingenc/g1_flutter_blue_plus/tree/main (Took **HEAVY** "inspiration" here)
+- https://github.com/emingenc/even_glasses
+- https://github.com/emingenc/g1_flutter_blue_plus/tree/main (Took **HEAVY** "inspiration" here)
