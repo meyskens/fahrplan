@@ -1,20 +1,28 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:typed_data';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as maps;
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_compass/flutter_compass.dart';
+import 'package:navigate/models/glass.dart';
+import 'package:navigate/services/commands.dart';
 import '../utils/route_step.dart';
 import '../services/directions_service.dart';
 import '../utils/map_style.dart';
+import '../utils/bitmap.dart'; // For generateNavigationBMP
+import '../services/bluetooth_manager.dart'; // Your BLE service with scanning and connecting
 
 class NavigationPage extends StatefulWidget {
+
   final List<RouteStep> steps;
 
-  const NavigationPage({
-    Key? key,
+
+  NavigationPage({
+    super.key,
     required this.steps,
-  }) : super(key: key);
+  });
 
   @override
   State<NavigationPage> createState() => _NavigationPageState();
@@ -24,12 +32,17 @@ class _NavigationPageState extends State<NavigationPage> {
   late maps.GoogleMapController _mapController;
   late StreamSubscription<Position> _locationSubscription;
   late StreamSubscription<CompassEvent> _headingSubscription;
-
+  // Variables to hold connection status
+  String leftStatus = 'Disconnected';
+  String rightStatus = 'Disconnected';
+  final BluetoothManager bluetoothManager = BluetoothManager();
   int _currentStepIndex = 0;
   maps.LatLng? _currentLocation;
   double _currentHeading = 0.0;
   List<maps.LatLng> _routePoints = [];
-  bool _isRerouting = false;
+  final bool _isRerouting = false;
+  bool _glassesConnected = false;
+  Timer? _timer;
 
   // Colors and styles
   static const backgroundColor = Color(0xFF2A2A2A);
@@ -40,9 +53,164 @@ class _NavigationPageState extends State<NavigationPage> {
   @override
   void initState() {
     super.initState();
-    _fetchFullRoute();
-    _startLocationTracking();
-    _startCompassTracking();
+
+    _scanAndConnect();
+      _fetchFullRoute();
+      _startLocationTracking();
+      _startCompassTracking();
+        _startSendingCurrentStepToGlasses();
+  }
+
+  void _startSendingCurrentStepToGlasses() {
+    _timer = Timer.periodic(Duration(seconds: 10), (timer) {
+      _sendCurrentStepToGlasses();
+    });
+  }
+
+  void _scanAndConnect() async {
+    try {
+      setState(() {
+        leftStatus = 'Scanning...';
+        rightStatus = 'Scanning...';
+      });
+
+      await bluetoothManager.startScanAndConnect(
+        onGlassFound: (Glass glass) async {
+          print('Glass found: ${glass.name} (${glass.side})');
+          await _connectToGlass(glass);
+        },
+        onScanTimeout: (message) {
+          print('Scan timeout: $message');
+          setState(() {
+            if (bluetoothManager.leftGlass == null) {
+              leftStatus = 'Not Found';
+            }
+            if (bluetoothManager.rightGlass == null) {
+              rightStatus = 'Not Found';
+            }
+          });
+        },
+        onScanError: (error) {
+          print('Scan error: $error');
+          setState(() {
+            leftStatus = 'Scan Error';
+            rightStatus = 'Scan Error';
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Scan error: $error')),
+          );
+        },
+      );
+    } catch (e) {
+      print('Error in _scanAndConnect: $e');
+      setState(() {
+        leftStatus = 'Error';
+        rightStatus = 'Error';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  Future<void> _connectToGlass(Glass glass) async {
+    await glass.connect();
+    setState(() {
+      if (glass.side == 'left') {
+        leftStatus = 'Connecting...';
+      } else {
+        rightStatus = 'Connecting...';
+      }
+    });
+
+    // Monitor connection
+    glass.device.connectionState.listen((BluetoothConnectionState state) {
+      if (glass.side == 'left') {
+        leftStatus = state.toString().split('.').last;
+      } else {
+        rightStatus = state.toString().split('.').last;
+      }
+      setState(() {}); // Update the UI
+      print('[${glass.side} Glass] Connection state: $state');
+      if (state == BluetoothConnectionState.disconnected) {
+        _glassesConnected = false;
+        print('[${glass.side} Glass] Disconnected, attempting to reconnect...');
+        setState(() {
+          if (glass.side == 'left') {
+            leftStatus = 'Reconnecting...';
+          } else {
+            rightStatus = 'Reconnecting...';
+          }
+        });
+        _reconnectGlass(glass);
+      }else if (state == BluetoothConnectionState.connected){
+        _glassesConnected = true;
+      }
+    });
+  }
+
+  Future<void> _reconnectGlass(Glass glass) async {
+    try {
+      await glass.connect();
+      print('[${glass.side} Glass] Reconnected.');
+      setState(() {
+        if (glass.side == 'left') {
+          leftStatus = 'Connected';
+        } else {
+          rightStatus = 'Connected';
+        }
+      });
+    } catch (e) {
+      print('[${glass.side} Glass] Reconnection failed: $e');
+      setState(() {
+        if (glass.side == 'left') {
+          leftStatus = 'Disconnected';
+        } else {
+          rightStatus = 'Disconnected';
+        }
+      });
+    }
+  }
+
+  void _sendBitmap(Uint8List bitmapData) async {
+
+  if (bluetoothManager.leftGlass != null && bluetoothManager.rightGlass != null) {
+    await sendBitmap(
+      bitmapData,
+      bluetoothManager
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Glasses are not connected')),
+    );
+  }
+}
+
+  Future<void> _sendCurrentStepToGlasses() async {
+    if (!_glassesConnected) {
+      print("Glasses are not connected. Cannot send step data.");
+      return;
+    }
+
+    if (_currentStepIndex < widget.steps.length) {
+      final currentStep = widget.steps[_currentStepIndex];
+
+      // Distance parsing from step distance string (e.g., "200 m" or "1.2 km")
+      double distanceValue = 0.0;
+      final distanceStr = currentStep.distance.toLowerCase();
+      if (distanceStr.contains("km")) {
+        // Convert km to m
+        final kmValue = double.parse(distanceStr.replaceAll('km', '').trim());
+        distanceValue = kmValue * 1000;
+      } else if (distanceStr.contains("m")) {
+        distanceValue = double.parse(distanceStr.replaceAll('m', '').trim());
+      }
+
+      final bmpData = await generateNavigationBMP(currentStep.maneuver, distanceValue);
+
+      // Instead of sending immediately, set the BMP data so it will be sent once every second
+      _sendBitmap(bmpData);
+    }
   }
 
   Future<void> _fetchFullRoute() async {
@@ -103,10 +271,12 @@ class _NavigationPageState extends State<NavigationPage> {
         currentStep.location.longitude,
       );
 
+      // If close to the next step and not at the last step, move to the next step
       if (distanceToNextStep < 20 && _currentStepIndex < widget.steps.length - 1) {
         setState(() {
           _currentStepIndex++;
         });
+        _sendCurrentStepToGlasses(); // Will set BMP data, updated once per second
       }
     }
   }
@@ -130,9 +300,11 @@ class _NavigationPageState extends State<NavigationPage> {
     );
   }
 
-  @override
+ @override
   void dispose() {
-    _locationSubscription.cancel();
+    bluetoothManager.leftGlass?.disconnect();
+    bluetoothManager.rightGlass?.disconnect();
+        _locationSubscription.cancel();
     _headingSubscription.cancel();
     super.dispose();
   }

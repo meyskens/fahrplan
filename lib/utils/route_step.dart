@@ -4,12 +4,14 @@ class RouteStep {
   final String instruction;
   final String additionalDetails;
   final String distance;
+  final String maneuver;
   final maps.LatLng location;
 
   RouteStep({
     required this.instruction,
     required this.additionalDetails,
     required this.distance,
+    required this.maneuver,
     required this.location,
   });
 }

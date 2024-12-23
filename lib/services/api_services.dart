@@ -38,7 +38,7 @@ class ApiService {
         print("Request failed with status: ${response.statusCode}");
         return "Request failed with status: ${response.statusCode}";
       }
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       if (e.response != null) {
         print("Error: ${e.response?.statusCode}, ${e.response?.data}");
         return "AI request error: ${e.response?.statusCode}, ${e.response?.data}";

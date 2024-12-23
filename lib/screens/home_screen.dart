@@ -24,7 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static const buttonHighlighted = Color(0xFF333333);
   static const accentColor = Color(0xFFE7E486);
   static const textActive = Color(0xFFF4F4F4);
-  static const textInactive = Color(0xFFA4AA4);
+  static const textInactive = Color(0x0ffa4aa4);
 
   static const maps.CameraPosition _initialPosition = maps.CameraPosition(
     target: maps.LatLng(40.7580, -73.9855),
@@ -211,8 +211,8 @@ class _HomeScreenState extends State<HomeScreen> {
             minimumSize: const Size.fromHeight(50),
             shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
           ).copyWith(
-            overlayColor: MaterialStateProperty.resolveWith<Color?>((states) {
-              if (states.contains(MaterialState.pressed)) {
+            overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
+              if (states.contains(WidgetState.pressed)) {
                 return buttonHighlighted;
               }
               return null;

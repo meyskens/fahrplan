@@ -50,6 +50,7 @@ Future<List<RouteStep>> fetchRouteSteps(maps.LatLng start, maps.LatLng end) asyn
             ? parts[1].replaceAll(RegExp(r'<[^>]*>|style="[^"]*"'), '').trim() // Second part, clean and trimmed
             : ''; // Default to empty if no additional details
         final distance = step['distance']['text'] as String;
+        final maneuver = step['maneuver'] as String? ?? 'straight';
         final location = maps.LatLng(
           step['end_location']['lat'],
           step['end_location']['lng'],
@@ -58,6 +59,7 @@ Future<List<RouteStep>> fetchRouteSteps(maps.LatLng start, maps.LatLng end) asyn
           instruction: mainInstruction,
           additionalDetails: additionalDetails,
           distance: distance,
+          maneuver: maneuver,
           location: location,
         );
       }).toList();

@@ -11,12 +11,12 @@ class LocationField extends StatefulWidget {
   final Future<void> Function(dynamic suggestion, TextEditingController textController)? onSuggestionChosen;
 
   const LocationField({
-    Key? key,
+    super.key,
     required this.hintText,
     required this.prefixIcon,
     required this.suggestionsCallback,
     this.onSuggestionChosen,
-  }) : super(key: key);
+  });
 
   @override
   State<LocationField> createState() => _LocationFieldState();
