@@ -5,7 +5,111 @@ import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
-Future<Uint8List> generateNavigationBMP(String maneuver, double distance) async {
+Future<Uint8List> generateBadAppleBMP(int i) async {
+  // fetch the JPG image from assets and render it to a canvas
+
+  const canvasWidth = 576;
+  const canvasHeight = 136;
+
+  final recorder = ui.PictureRecorder();
+  final canvas = ui.Canvas(recorder);
+
+  // Draw background (black)
+  final backgroundPaint = ui.Paint()
+    ..color = const ui.Color.fromARGB(255, 255, 255, 255);
+  canvas.drawRect(
+      ui.Rect.fromLTWH(0, 0, canvasWidth.toDouble(), canvasHeight.toDouble()),
+      backgroundPaint);
+
+  // open the asset file
+  // convert i to a string from 001 to 6500
+  final iStr = i.toString().padLeft(3, '0');
+
+  final ByteData data = await rootBundle.load('assets/badapple/$iStr.jpg');
+  final Uint8List bytes = data.buffer.asUint8List();
+
+  // draw the image to the canvas at the center and scale it to fit the height
+  final codec = await ui.instantiateImageCodec(bytes);
+  final frame = await codec.getNextFrame();
+  final image = frame.image;
+  final scale = canvasHeight / image.height;
+  final dstRect = ui.Rect.fromLTWH(
+    (canvasWidth - image.width * scale) / 2,
+    0,
+    image.width * scale,
+    canvasHeight.toDouble(),
+  );
+  canvas.drawImageRect(
+    image,
+    ui.Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+    dstRect,
+    ui.Paint(),
+  );
+
+  // Convert to an image
+  final picture = recorder.endRecording();
+  final byteData = await (await picture.toImage(canvasWidth, canvasHeight))
+      .toByteData(format: ui.ImageByteFormat.rawRgba);
+  final rgbaData = byteData!.buffer.asUint8List();
+
+  // Convert RGBA to 1-bit monochrome (0=black, 1=white)
+  final bmpData = _convertRgbaTo1Bit(rgbaData, canvasWidth, canvasHeight);
+
+  // Build the BMP headers and combine
+  final bmpBytes = _build1BitBmp(canvasWidth, canvasHeight, bmpData);
+
+  // Save BMP temporarily to disk for debugging
+  _saveBitmapToDisk(bmpBytes, 'demo.bmp');
+
+  return bmpBytes;
+}
+
+Future<Uint8List> generateDemoBMP() async {
+  const canvasWidth = 576;
+  const canvasHeight = 136;
+
+  final recorder = ui.PictureRecorder();
+  final canvas = ui.Canvas(recorder);
+
+  // Draw background (black)
+  final backgroundPaint = ui.Paint()
+    ..color = const ui.Color.fromARGB(255, 255, 255, 255);
+  canvas.drawRect(
+      ui.Rect.fromLTWH(0, 0, canvasWidth.toDouble(), canvasHeight.toDouble()),
+      backgroundPaint);
+
+  // Draw text in white
+  final textStyle =
+      ui.TextStyle(color: ui.Color.fromARGB(255, 0, 0, 0), fontSize: 24);
+  final paragraphStyle = ui.ParagraphStyle(textAlign: ui.TextAlign.center);
+  final paragraphBuilder = ui.ParagraphBuilder(paragraphStyle)
+    ..pushStyle(textStyle)
+    ..addText("Hello World!");
+
+  final paragraph = paragraphBuilder.build()
+    ..layout(ui.ParagraphConstraints(width: canvasWidth.toDouble()));
+  canvas.drawParagraph(paragraph, ui.Offset(0, canvasHeight / 2));
+
+  // Convert to an image
+  final picture = recorder.endRecording();
+  final image = await picture.toImage(canvasWidth, canvasHeight);
+  final byteData = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+  final rgbaData = byteData!.buffer.asUint8List();
+
+  // Convert RGBA to 1-bit monochrome (0=black, 1=white)
+  final bmpData = _convertRgbaTo1Bit(rgbaData, canvasWidth, canvasHeight);
+
+  // Build the BMP headers and combine
+  final bmpBytes = _build1BitBmp(canvasWidth, canvasHeight, bmpData);
+
+  // Save BMP temporarily to disk for debugging
+  //_saveBitmapToDisk(bmpBytes, 'demo.bmp');
+
+  return bmpBytes;
+}
+
+Future<Uint8List> generateNavigationBMP(
+    String maneuver, double distance) async {
   const canvasWidth = 576;
   const canvasHeight = 136;
 
@@ -14,7 +118,9 @@ Future<Uint8List> generateNavigationBMP(String maneuver, double distance) async 
 
   // Draw background (black)
   final backgroundPaint = ui.Paint()..color = const ui.Color(0xFF000000);
-  canvas.drawRect(ui.Rect.fromLTWH(0, 0, canvasWidth.toDouble(), canvasHeight.toDouble()), backgroundPaint);
+  canvas.drawRect(
+      ui.Rect.fromLTWH(0, 0, canvasWidth.toDouble(), canvasHeight.toDouble()),
+      backgroundPaint);
 
   // Draw icon
   final iconData = await _loadManeuverIcon(maneuver);

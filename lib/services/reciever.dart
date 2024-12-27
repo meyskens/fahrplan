@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:fahrplan/models/g1/glass.dart';
+
 // Command response status codes
 const int RESPONSE_SUCCESS = 0xC9;
 const int RESPONSE_FAILURE = 0xCA;
@@ -13,8 +15,9 @@ class VoiceDataCollector {
     _chunks[seq] = data;
   }
 
-  bool get isComplete => _chunks.length > 0 && !_chunks.containsKey(_expectedSeq);
-  
+  bool get isComplete =>
+      _chunks.isNotEmpty && !_chunks.containsKey(_expectedSeq);
+
   List<int> getAllData() {
     List<int> complete = [];
     for (var i = 0; i < _chunks.length; i++) {
@@ -33,11 +36,11 @@ class VoiceDataCollector {
 
 final VoiceDataCollector voiceCollector = VoiceDataCollector();
 
-Future<void> receiveHandler(String side, List<int> data) async {
+Future<void> receiveHandler(GlassSide side, List<int> data) async {
   if (data.isEmpty) return;
 
   int command = data[0];
-  
+
   switch (command) {
     case 0xF5: // Start Even AI
       if (data.length >= 2) {
@@ -45,7 +48,7 @@ Future<void> receiveHandler(String side, List<int> data) async {
         handleEvenAICommand(side, subcmd);
       }
       break;
-      
+
     case 0x0E: // Mic Response
       if (data.length >= 3) {
         int status = data[1];
@@ -53,7 +56,7 @@ Future<void> receiveHandler(String side, List<int> data) async {
         handleMicResponse(side, status, enable);
       }
       break;
-      
+
     case 0xF1: // Voice Data
       if (data.length >= 2) {
         int seq = data[1];
@@ -61,13 +64,13 @@ Future<void> receiveHandler(String side, List<int> data) async {
         handleVoiceData(side, seq, voiceData);
       }
       break;
-      
+
     default:
       print('[$side] Unknown command: 0x${command.toRadixString(16)}');
   }
 }
 
-void handleEvenAICommand(String side, int subcmd) {
+void handleEvenAICommand(GlassSide side, int subcmd) {
   switch (subcmd) {
     case 0:
       print('[$side] Exit to dashboard manually');
@@ -90,7 +93,7 @@ void handleEvenAICommand(String side, int subcmd) {
   }
 }
 
-void handleMicResponse(String side, int status, int enable) {
+void handleMicResponse(GlassSide side, int status, int enable) {
   if (status == RESPONSE_SUCCESS) {
     print('[$side] Mic ${enable == 1 ? "enabled" : "disabled"} successfully');
   } else if (status == RESPONSE_FAILURE) {
@@ -98,7 +101,8 @@ void handleMicResponse(String side, int status, int enable) {
   }
 }
 
-void handleVoiceData(String side, int seq, List<int> voiceData) {
-  print('[$side] Received voice data chunk: seq=$seq, length=${voiceData.length}');
+void handleVoiceData(GlassSide side, int seq, List<int> voiceData) {
+  print(
+      '[$side] Received voice data chunk: seq=$seq, length=${voiceData.length}');
   voiceCollector.addChunk(seq, voiceData);
 }
