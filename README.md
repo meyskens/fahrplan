@@ -13,7 +13,7 @@ Simple: they are the only glasses with display that fit my face and are able to 
 ## Supported OSes?
 
 - Android (primary development)
-- iOS (probably works as no native code is used)
+- iOS (probably works in simple tasks, notifications and permissions will need work!)
 - Linux will not work: experiments have been done with Bluez but BLE notifications are buggy, sorry 
 
 ## Thanks
