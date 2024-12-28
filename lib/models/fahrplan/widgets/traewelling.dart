@@ -117,7 +117,7 @@ class TraewellingWidget implements FahrplanWidget {
     if (remainingMinutes > 60) {
       remainingDuration += '${remainingMinutes ~/ 60}h ';
     }
-    remainingDuration += '${remainingMinutes % 60}min';
+    remainingDuration += '${remainingMinutes % 60}m';
 
     return [
       Note(
