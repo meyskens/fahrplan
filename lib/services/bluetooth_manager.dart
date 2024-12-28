@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:android_package_manager/android_package_manager.dart';
+import 'package:fahrplan/models/fahrplan/fahrplan_dashboard.dart';
 import 'package:fahrplan/models/g1/bmp.dart';
 import 'package:fahrplan/models/g1/crc.dart';
 import 'package:fahrplan/models/g1/dashboard.dart';
@@ -40,6 +41,10 @@ class BluetoothManager {
     notificationListener!.startListening();
   }
 
+  FahrplanDashboard fahrplanDashboard = FahrplanDashboard();
+
+  Timer? _syncTimer;
+
   Glass? leftGlass;
   Glass? rightGlass;
 
@@ -63,8 +68,6 @@ class BluetoothManager {
       Permission.bluetoothScan,
       Permission.bluetoothConnect,
       Permission.location,
-      //Permission.accessNotificationPolicy,
-      //Permission.notification,
     ].request();
 
     if (statuses.values.any((status) => status.isDenied)) {
@@ -104,6 +107,10 @@ class BluetoothManager {
   }
 
   Future<void> _startScan(OnUpdate onUpdate) async {
+    _syncTimer ??= Timer.periodic(const Duration(minutes: 1), (timer) {
+      _sync();
+    });
+
     await FlutterBluePlus.stopScan();
     debugPrint('Starting new scan attempt ${_retryCount + 1}/$maxRetries');
 
@@ -188,6 +195,7 @@ class BluetoothManager {
     if (leftGlass != null && rightGlass != null) {
       _isScanning = false;
       stopScanning();
+      _sync();
     }
   }
 
@@ -432,5 +440,16 @@ class BluetoothManager {
       return false;
     }
     return null;
+  }
+
+  Future<void> _sync() async {
+    if (!isConnected) {
+      return;
+    }
+
+    final notes = await fahrplanDashboard.generateDashboardItems();
+    for (var note in notes) {
+      await sendNote(note);
+    }
   }
 }

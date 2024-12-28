@@ -8,7 +8,7 @@ class NoteConstants {
   static const int FIXED_BYTE_2 = 0x01;
 }
 
-// NoteSupportedIcons class is used to store the supported icons in notes as observed 
+// NoteSupportedIcons class is used to store the supported icons in notes as observed
 // to be supported in the official ER app.
 class NoteSupportedIcons {
   static const String CHECKBOX = '☐';
@@ -16,7 +16,7 @@ class NoteSupportedIcons {
 }
 
 class Note {
-  final int noteNumber;
+  int noteNumber;
   final String name;
   final String text;
 
