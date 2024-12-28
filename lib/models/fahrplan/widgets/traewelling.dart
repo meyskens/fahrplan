@@ -1,10 +1,19 @@
 import 'dart:convert';
 import 'package:fahrplan/models/fahrplan/widgets/fahrplan_widget.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:fahrplan/models/g1/note.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+const _allowedProducts = [
+  'nationalExpress',
+  'national',
+  'regionalExp',
+  'regional',
+  'suburban'
+];
 
 class TraewellingWidget implements FahrplanWidget {
   String? username;
@@ -44,8 +53,105 @@ class TraewellingWidget implements FahrplanWidget {
     }
   }
 
+  Future<_TraewellingStationResponse> _getStationTable(String id) async {
+    final response = await http.get(
+      Uri.parse('https://traewelling.de/api/v1/station/$id/departures'),
+      headers: <String, String>{
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return _TraewellingStationResponse.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to load trips');
+    }
+  }
+
+  Future<List<Note>> _generateDeparture(
+      String stationId, Train? currentTrain) async {
+    final response = await _getStationTable(stationId);
+    if (response.data == null || response.data!.isEmpty) {
+      return [];
+    }
+    // filter all non "nationalExpress" "national" "regionalExp" "regional" "suburban"
+
+    final filteredData = response.data!
+        .where((element) =>
+            _allowedProducts.contains(element.line?.product ?? '') &&
+            (currentTrain != null
+                ? (element.line?.name ?? '') != currentTrain.lineName
+                : true))
+        .toList();
+
+    // filter out all trains that have already left
+    filteredData.removeWhere((element) {
+      DateTime plannedWhen = DateTime.parse(element.plannedWhen ?? '');
+      plannedWhen = plannedWhen.add(Duration(minutes: element.delay ?? 0));
+      return plannedWhen.isBefore(DateTime.now());
+    });
+
+    // mandatory reservation sucks!
+    filteredData.removeWhere((element) =>
+        element.line == null ||
+        element.line?.name == null ||
+        (element.line!.name!.startsWith("EUR")) ||
+        (element.line!.name!.startsWith("EST")));
+
+    // remove trains that leave before our current train arrives
+    if (currentTrain != null) {
+      filteredData.removeWhere((element) {
+        DateTime plannedWhen = DateTime.parse(element.plannedWhen ?? '');
+        plannedWhen = plannedWhen.add(Duration(minutes: element.delay ?? 0));
+        DateTime arrival = DateTime.parse(
+            currentTrain.destination?.arrivalReal ??
+                currentTrain.destination?.arrivalPlanned ??
+                '');
+        return plannedWhen.isBefore(arrival);
+      });
+    }
+
+    if (filteredData.isEmpty) {
+      debugPrint('No trains found after filtering');
+      return [];
+    }
+
+    // select first 4
+    if (filteredData.length > 4) {
+      filteredData.removeRange(4, filteredData.length);
+    }
+
+    String text = '';
+    for (final item in filteredData) {
+      DateTime plannedWhen = DateTime.parse(item.plannedWhen ?? '').toLocal();
+      double delayMin = (item.delay ?? 0) / 60;
+      String delay = delayMin > 5 ? ' (+${delayMin.round()})' : '';
+      String platform = item.plannedPlatform ?? item.platform ?? '';
+      if (platform.isNotEmpty) {
+        platform = 'pl. $platform';
+      }
+      String line = item.line?.name ?? '';
+      String destination = item.destination?.name ?? '';
+      // shorten destination name
+      if (destination.length > 10) {
+        destination = '${destination.substring(0, 10)}...';
+      }
+
+      text +=
+          '${NoteSupportedIcons.CHECKBOX} ${DateFormat('HH:mm').format(plannedWhen)}$delay [$line] to $destination $platform\n';
+    }
+    return [
+      Note(
+          noteNumber: 1, // dummy
+          name: filteredData.first.stop?.name ?? 'Departures',
+          text: text)
+    ];
+  }
+
   @override
   Future<List<Note>> generateDashboardItems() async {
+    final notes = <Note>[];
+
     await loadCredentials();
     if (username == null || username!.isEmpty) {
       return [];
@@ -69,6 +175,15 @@ class TraewellingWidget implements FahrplanWidget {
     }
 
     if (currentTrains.isEmpty) {
+      if (DateTime.parse(response.data?.first.train?.destination?.arrivalReal ??
+              response.data?.first.train?.destination?.arrivalPlanned ??
+              '')
+          .isBefore(DateTime.now().add(Duration(minutes: 10)))) {
+        final stationId = response.data?.first.train?.destination?.id;
+        if (stationId != null) {
+          return await _generateDeparture(stationId.toString(), null);
+        }
+      }
       return [];
     }
 
@@ -90,77 +205,76 @@ class TraewellingWidget implements FahrplanWidget {
         DateTime.parse(train.destination?.arrivalPlanned ?? '');
     DateTime arrivalReal = DateTime.parse(train.destination?.arrivalReal ?? '');
 
-    String departureTime = DateFormat('HH:mm').format(departurePlanned);
+    String departureTime =
+        DateFormat('HH:mm').format(departurePlanned.toLocal());
     // if departureReal is at least 1 minute after planned note the delay with (+X)
     if (departureReal.difference(departurePlanned).inMinutes >= 1) {
       departureTime +=
-          ' (+${departureReal.difference(departurePlanned).inMinutes} ${DateFormat('HH:mm').format(departureReal)})';
+          ' (+${departureReal.difference(departurePlanned).inMinutes} ${DateFormat('HH:mm').format(departureReal.toLocal())})';
     }
 
-    String arrivalTime = DateFormat('HH:mm').format(arrivalPlanned);
+    String arrivalTime = DateFormat('HH:mm').format(arrivalPlanned.toLocal());
     // if arrivalReal is at least 1 minute after planned note the delay with (+X)
     if (arrivalReal.difference(arrivalPlanned).inMinutes >= 1) {
       arrivalTime +=
-          ' (+${arrivalReal.difference(arrivalPlanned).inMinutes} ${DateFormat('HH:mm').format(arrivalReal)})';
+          ' (+${arrivalReal.difference(arrivalPlanned).inMinutes} ${DateFormat('HH:mm').format(arrivalReal.toLocal())})';
     }
 
     // convert minutes to hours and minutes, drop hours if 0
     String duration = '';
-    if (train.duration! > 60) {
+    if (train.duration! > 59) {
       duration += '${train.duration! ~/ 60}h ';
+    } else if (train.duration! == 60) {
+      duration += '1h';
     }
     duration += '${train.duration! % 60}min';
     double distance = train.distance! / 1000;
 
     String remainingDuration = '';
     int remainingMinutes = arrivalPlanned.difference(DateTime.now()).inMinutes;
-    if (remainingMinutes > 60) {
+    if (remainingMinutes > 59) {
       remainingDuration += '${remainingMinutes ~/ 60}h ';
+    } else if (remainingMinutes == 60) {
+      remainingDuration += '1h';
     }
     remainingDuration += '${remainingMinutes % 60}m';
 
-    return [
-      Note(
-        noteNumber: 1, // dummy
-        name: '[${train.lineName}] to ${train.destination?.name}',
-        text:
-            '[$departureTime] ${train.origin?.name} pl. ${train.origin?.arrivalPlatformReal ?? train.origin?.arrivalPlanned ?? ''}\n'
-            'Operator: ${train.operator?.name}\n'
-            'dist: ${distance.round()}km  pts: ${train.points}  dur: $duration\n'
-            '-> [$arrivalTime] ($remainingDuration) ${train.destination?.name} pl. ${train.destination?.arrivalPlatformReal ?? train.destination?.arrivalPlanned ?? ''}',
-      )
-    ];
+    if (remainingMinutes < 5) {
+      notes.addAll(
+          await _generateDeparture(train.destination!.id.toString(), train));
+    }
+
+    notes.add(Note(
+      noteNumber: 1, // dummy
+      name: '[${train.lineName}] to ${train.destination?.name}',
+      text:
+          '[$departureTime] ${train.origin?.name} pl. ${train.origin?.departurePlatformReal ?? train.origin?.departurePlatformPlanned ?? ''}\n'
+          'Operator: ${train.operator?.name}\n'
+          'dist: ${distance.round()}km  pts: ${train.points}  dur: $duration\n'
+          '-> [$arrivalTime] ($remainingDuration) ${train.destination?.name} pl. ${train.destination?.arrivalPlatformReal ?? train.destination?.arrivalPlanned ?? ''}',
+    ));
+
+    return notes;
   }
 }
 
 class _TraewellingResponse {
   List<Data>? data;
-  Links? links;
-  Meta? meta;
-
-  _TraewellingResponse({this.data, this.links, this.meta});
+  _TraewellingResponse({this.data});
 
   _TraewellingResponse.fromJson(Map<String, dynamic> json) {
     if (json['data'] != null) {
       data = <Data>[];
       json['data'].forEach((v) {
-        data!.add(new Data.fromJson(v));
+        data!.add(Data.fromJson(v));
       });
     }
-    links = json['links'] != null ? new Links.fromJson(json['links']) : null;
-    meta = json['meta'] != null ? new Meta.fromJson(json['meta']) : null;
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
+    final Map<String, dynamic> data = <String, dynamic>{};
     if (this.data != null) {
       data['data'] = this.data!.map((v) => v.toJson()).toList();
-    }
-    if (this.links != null) {
-      data['links'] = this.links!.toJson();
-    }
-    if (this.meta != null) {
-      data['meta'] = this.meta!.toJson();
     }
     return data;
   }
@@ -169,42 +283,27 @@ class _TraewellingResponse {
 class Data {
   int? id;
   String? body;
-  List<Null>? bodyMentions;
   int? user;
   String? username;
   String? profilePicture;
-  bool? preventIndex;
-  int? business;
-  int? visibility;
-  int? likes;
   bool? liked;
   bool? isLikable;
-  Null? client;
   String? createdAt;
   Train? train;
-  Null? event;
   UserDetails? userDetails;
-  List<Null>? tags;
 
-  Data(
-      {this.id,
-      this.body,
-      this.bodyMentions,
-      this.user,
-      this.username,
-      this.profilePicture,
-      this.preventIndex,
-      this.business,
-      this.visibility,
-      this.likes,
-      this.liked,
-      this.isLikable,
-      this.client,
-      this.createdAt,
-      this.train,
-      this.event,
-      this.userDetails,
-      this.tags});
+  Data({
+    this.id,
+    this.body,
+    this.user,
+    this.username,
+    this.profilePicture,
+    this.liked,
+    this.isLikable,
+    this.createdAt,
+    this.train,
+    this.userDetails,
+  });
 
   Data.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -212,42 +311,30 @@ class Data {
     user = json['user'];
     username = json['username'];
     profilePicture = json['profilePicture'];
-    preventIndex = json['preventIndex'];
-    business = json['business'];
-    visibility = json['visibility'];
-    likes = json['likes'];
     liked = json['liked'];
     isLikable = json['isLikable'];
-    client = json['client'];
     createdAt = json['createdAt'];
-    train = json['train'] != null ? new Train.fromJson(json['train']) : null;
-    event = json['event'];
+    train = json['train'] != null ? Train.fromJson(json['train']) : null;
     userDetails = json['userDetails'] != null
-        ? new UserDetails.fromJson(json['userDetails'])
+        ? UserDetails.fromJson(json['userDetails'])
         : null;
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['id'] = this.id;
-    data['body'] = this.body;
-    data['user'] = this.user;
-    data['username'] = this.username;
-    data['profilePicture'] = this.profilePicture;
-    data['preventIndex'] = this.preventIndex;
-    data['business'] = this.business;
-    data['visibility'] = this.visibility;
-    data['likes'] = this.likes;
-    data['liked'] = this.liked;
-    data['isLikable'] = this.isLikable;
-    data['client'] = this.client;
-    data['createdAt'] = this.createdAt;
-    if (this.train != null) {
-      data['train'] = this.train!.toJson();
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['id'] = id;
+    data['body'] = body;
+    data['user'] = user;
+    data['username'] = username;
+    data['profilePicture'] = profilePicture;
+    data['liked'] = liked;
+    data['isLikable'] = isLikable;
+    data['createdAt'] = createdAt;
+    if (train != null) {
+      data['train'] = train!.toJson();
     }
-    data['event'] = this.event;
-    if (this.userDetails != null) {
-      data['userDetails'] = this.userDetails!.toJson();
+    if (userDetails != null) {
+      data['userDetails'] = userDetails!.toJson();
     }
     return data;
   }
@@ -263,8 +350,6 @@ class Train {
   int? distance;
   int? points;
   int? duration;
-  Null? manualDeparture;
-  Null? manualArrival;
   Origin? origin;
   Origin? destination;
   Operator? operator;
@@ -279,8 +364,6 @@ class Train {
       this.distance,
       this.points,
       this.duration,
-      this.manualDeparture,
-      this.manualArrival,
       this.origin,
       this.destination,
       this.operator});
@@ -295,39 +378,33 @@ class Train {
     distance = json['distance'];
     points = json['points'];
     duration = json['duration'];
-    manualDeparture = json['manualDeparture'];
-    manualArrival = json['manualArrival'];
-    origin =
-        json['origin'] != null ? new Origin.fromJson(json['origin']) : null;
+    origin = json['origin'] != null ? Origin.fromJson(json['origin']) : null;
     destination = json['destination'] != null
-        ? new Origin.fromJson(json['destination'])
+        ? Origin.fromJson(json['destination'])
         : null;
-    operator = json['operator'] != null
-        ? new Operator.fromJson(json['operator'])
-        : null;
+    operator =
+        json['operator'] != null ? Operator.fromJson(json['operator']) : null;
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['trip'] = this.trip;
-    data['hafasId'] = this.hafasId;
-    data['category'] = this.category;
-    data['number'] = this.number;
-    data['lineName'] = this.lineName;
-    data['journeyNumber'] = this.journeyNumber;
-    data['distance'] = this.distance;
-    data['points'] = this.points;
-    data['duration'] = this.duration;
-    data['manualDeparture'] = this.manualDeparture;
-    data['manualArrival'] = this.manualArrival;
-    if (this.origin != null) {
-      data['origin'] = this.origin!.toJson();
+    final Map<String, dynamic> data = Map<String, dynamic>();
+    data['trip'] = trip;
+    data['hafasId'] = hafasId;
+    data['category'] = category;
+    data['number'] = number;
+    data['lineName'] = lineName;
+    data['journeyNumber'] = journeyNumber;
+    data['distance'] = distance;
+    data['points'] = points;
+    data['duration'] = duration;
+    if (origin != null) {
+      data['origin'] = origin!.toJson();
     }
-    if (this.destination != null) {
-      data['destination'] = this.destination!.toJson();
+    if (destination != null) {
+      data['destination'] = destination!.toJson();
     }
-    if (this.operator != null) {
-      data['operator'] = this.operator!.toJson();
+    if (operator != null) {
+      data['operator'] = operator!.toJson();
     }
     return data;
   }
@@ -395,47 +472,44 @@ class Origin {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['id'] = this.id;
-    data['name'] = this.name;
-    data['rilIdentifier'] = this.rilIdentifier;
-    data['evaIdentifier'] = this.evaIdentifier;
-    data['arrival'] = this.arrival;
-    data['arrivalPlanned'] = this.arrivalPlanned;
-    data['arrivalReal'] = this.arrivalReal;
-    data['arrivalPlatformPlanned'] = this.arrivalPlatformPlanned;
-    data['arrivalPlatformReal'] = this.arrivalPlatformReal;
-    data['departure'] = this.departure;
-    data['departurePlanned'] = this.departurePlanned;
-    data['departureReal'] = this.departureReal;
-    data['departurePlatformPlanned'] = this.departurePlatformPlanned;
-    data['departurePlatformReal'] = this.departurePlatformReal;
-    data['platform'] = this.platform;
-    data['isArrivalDelayed'] = this.isArrivalDelayed;
-    data['isDepartureDelayed'] = this.isDepartureDelayed;
-    data['cancelled'] = this.cancelled;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['id'] = id;
+    data['name'] = name;
+    data['rilIdentifier'] = rilIdentifier;
+    data['evaIdentifier'] = evaIdentifier;
+    data['arrival'] = arrival;
+    data['arrivalPlanned'] = arrivalPlanned;
+    data['arrivalReal'] = arrivalReal;
+    data['arrivalPlatformPlanned'] = arrivalPlatformPlanned;
+    data['arrivalPlatformReal'] = arrivalPlatformReal;
+    data['departure'] = departure;
+    data['departurePlanned'] = departurePlanned;
+    data['departureReal'] = departureReal;
+    data['departurePlatformPlanned'] = departurePlatformPlanned;
+    data['departurePlatformReal'] = departurePlatformReal;
+    data['platform'] = platform;
+    data['isArrivalDelayed'] = isArrivalDelayed;
+    data['isDepartureDelayed'] = isDepartureDelayed;
+    data['cancelled'] = cancelled;
     return data;
   }
 }
 
 class Operator {
-  int? id;
   String? identifier;
   String? name;
 
-  Operator({this.id, this.identifier, this.name});
+  Operator({this.identifier, this.name});
 
   Operator.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
     identifier = json['identifier'];
     name = json['name'];
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['id'] = this.id;
-    data['identifier'] = this.identifier;
-    data['name'] = this.name;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['identifier'] = identifier;
+    data['name'] = name;
     return data;
   }
 }
@@ -466,66 +540,323 @@ class UserDetails {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['id'] = this.id;
-    data['displayName'] = this.displayName;
-    data['username'] = this.username;
-    data['profilePicture'] = this.profilePicture;
-    data['mastodonUrl'] = this.mastodonUrl;
-    data['preventIndex'] = this.preventIndex;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['id'] = id;
+    data['displayName'] = displayName;
+    data['username'] = username;
+    data['profilePicture'] = profilePicture;
+    data['mastodonUrl'] = mastodonUrl;
+    data['preventIndex'] = preventIndex;
     return data;
   }
 }
 
-class Links {
-  String? first;
-  Null? last;
-  Null? prev;
+class _TraewellingStationResponse {
+  List<TraewellingStationResponseData>? data;
+
+  _TraewellingStationResponse({this.data});
+
+  _TraewellingStationResponse.fromJson(Map<String, dynamic> json) {
+    if (json['data'] != null) {
+      data = <TraewellingStationResponseData>[];
+      json['data'].forEach((v) {
+        data!.add(new TraewellingStationResponseData.fromJson(v));
+      });
+    }
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    if (this.data != null) {
+      data['data'] = this.data!.map((v) => v.toJson()).toList();
+    }
+    return data;
+  }
+}
+
+class TraewellingStationResponseData {
+  String? tripId;
+  Stop? stop;
+  String? when;
+  String? plannedWhen;
+  int? delay;
+  String? platform;
+  String? plannedPlatform;
+  String? prognosisType;
+  Line? line;
+  Stop? destination;
+  Station? station;
+
+  TraewellingStationResponseData(
+      {this.tripId,
+      this.stop,
+      this.when,
+      this.plannedWhen,
+      this.delay,
+      this.platform,
+      this.plannedPlatform,
+      this.prognosisType,
+      this.line,
+      this.destination,
+      this.station});
+
+  TraewellingStationResponseData.fromJson(Map<String, dynamic> json) {
+    tripId = json['tripId'];
+    stop = json['stop'] != null ? new Stop.fromJson(json['stop']) : null;
+    when = json['when'];
+    plannedWhen = json['plannedWhen'];
+    delay = json['delay'];
+    platform = json['platform'];
+    plannedPlatform = json['plannedPlatform'];
+    prognosisType = json['prognosisType'];
+    line = json['line'] != null ? new Line.fromJson(json['line']) : null;
+    destination = json['destination'] != null
+        ? new Stop.fromJson(json['destination'])
+        : null;
+    station =
+        json['station'] != null ? new Station.fromJson(json['station']) : null;
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['tripId'] = this.tripId;
+    if (this.stop != null) {
+      data['stop'] = this.stop!.toJson();
+    }
+    data['when'] = this.when;
+    data['plannedWhen'] = this.plannedWhen;
+    data['delay'] = this.delay;
+    data['platform'] = this.platform;
+    data['plannedPlatform'] = this.plannedPlatform;
+    data['prognosisType'] = this.prognosisType;
+    if (this.line != null) {
+      data['line'] = this.line!.toJson();
+    }
+    if (this.destination != null) {
+      data['destination'] = this.destination!.toJson();
+    }
+    if (this.station != null) {
+      data['station'] = this.station!.toJson();
+    }
+    return data;
+  }
+}
+
+class Stop {
+  String? type;
+  String? id;
+  String? name;
+  Location? location;
+  Products? products;
+
+  Stop({this.type, this.id, this.name, this.location, this.products});
+
+  Stop.fromJson(Map<String, dynamic> json) {
+    type = json['type'];
+    id = json['id'];
+    name = json['name'];
+    location = json['location'] != null
+        ? new Location.fromJson(json['location'])
+        : null;
+    products = json['products'] != null
+        ? new Products.fromJson(json['products'])
+        : null;
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['type'] = this.type;
+    data['id'] = this.id;
+    data['name'] = this.name;
+    if (this.location != null) {
+      data['location'] = this.location!.toJson();
+    }
+    if (this.products != null) {
+      data['products'] = this.products!.toJson();
+    }
+    return data;
+  }
+}
+
+class Location {
+  String? type;
+  String? id;
+  double? latitude;
+  double? longitude;
+
+  Location({this.type, this.id, this.latitude, this.longitude});
+
+  Location.fromJson(Map<String, dynamic> json) {
+    type = json['type'];
+    id = json['id'];
+    latitude = json['latitude'];
+    longitude = json['longitude'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['type'] = this.type;
+    data['id'] = this.id;
+    data['latitude'] = this.latitude;
+    data['longitude'] = this.longitude;
+    return data;
+  }
+}
+
+class Products {
+  bool? nationalExpress;
+  bool? national;
+  bool? regionalExp;
+  bool? regional;
+  bool? suburban;
+  bool? bus;
+  bool? ferry;
+  bool? subway;
+  bool? tram;
+  bool? taxi;
+
+  Products(
+      {this.nationalExpress,
+      this.national,
+      this.regionalExp,
+      this.regional,
+      this.suburban,
+      this.bus,
+      this.ferry,
+      this.subway,
+      this.tram,
+      this.taxi});
+
+  Products.fromJson(Map<String, dynamic> json) {
+    nationalExpress = json['nationalExpress'];
+    national = json['national'];
+    regionalExp = json['regionalExp'];
+    regional = json['regional'];
+    suburban = json['suburban'];
+    bus = json['bus'];
+    ferry = json['ferry'];
+    subway = json['subway'];
+    tram = json['tram'];
+    taxi = json['taxi'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['nationalExpress'] = this.nationalExpress;
+    data['national'] = this.national;
+    data['regionalExp'] = this.regionalExp;
+    data['regional'] = this.regional;
+    data['suburban'] = this.suburban;
+    data['bus'] = this.bus;
+    data['ferry'] = this.ferry;
+    data['subway'] = this.subway;
+    data['tram'] = this.tram;
+    data['taxi'] = this.taxi;
+    return data;
+  }
+}
+
+class Line {
+  String? type;
+  String? id;
+  String? fahrtNr;
+  String? name;
+  bool? public;
+  String? adminCode;
+  String? productName;
+  String? mode;
+  String? product;
+  Operator? operator;
+
+  Line(
+      {this.type,
+      this.id,
+      this.fahrtNr,
+      this.name,
+      this.public,
+      this.adminCode,
+      this.productName,
+      this.mode,
+      this.product,
+      this.operator});
+
+  Line.fromJson(Map<String, dynamic> json) {
+    type = json['type'];
+    id = json['id'];
+    fahrtNr = json['fahrtNr'];
+    name = json['name'];
+    public = json['public'];
+    adminCode = json['adminCode'];
+    productName = json['productName'];
+    mode = json['mode'];
+    product = json['product'];
+    operator = json['operator'] != null
+        ? new Operator.fromJson(json['operator'])
+        : null;
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['type'] = this.type;
+    data['id'] = this.id;
+    data['fahrtNr'] = this.fahrtNr;
+    data['name'] = this.name;
+    data['public'] = this.public;
+    data['adminCode'] = this.adminCode;
+    data['productName'] = this.productName;
+    data['mode'] = this.mode;
+    data['product'] = this.product;
+    if (this.operator != null) {
+      data['operator'] = this.operator!.toJson();
+    }
+    return data;
+  }
+}
+
+class Station {
+  int? id;
+  String? name;
+  String? localizedName;
+
+  Station({
+    this.id,
+    this.name,
+    this.localizedName,
+  });
+
+  Station.fromJson(Map<String, dynamic> json) {
+    id = json['id'];
+    name = json['name'];
+    localizedName = json['localized_name'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['id'] = this.id;
+    data['name'] = this.name;
+    data['localized_name'] = this.localizedName;
+    return data;
+  }
+}
+
+class Times {
+  String? now;
+  String? prev;
   String? next;
 
-  Links({this.first, this.last, this.prev, this.next});
+  Times({this.now, this.prev, this.next});
 
-  Links.fromJson(Map<String, dynamic> json) {
-    first = json['first'];
-    last = json['last'];
+  Times.fromJson(Map<String, dynamic> json) {
+    now = json['now'];
     prev = json['prev'];
     next = json['next'];
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['first'] = this.first;
-    data['last'] = this.last;
+    data['now'] = this.now;
     data['prev'] = this.prev;
     data['next'] = this.next;
-    return data;
-  }
-}
-
-class Meta {
-  int? currentPage;
-  int? from;
-  String? path;
-  int? perPage;
-  int? to;
-
-  Meta({this.currentPage, this.from, this.path, this.perPage, this.to});
-
-  Meta.fromJson(Map<String, dynamic> json) {
-    currentPage = json['current_page'];
-    from = json['from'];
-    path = json['path'];
-    perPage = json['per_page'];
-    to = json['to'];
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['current_page'] = this.currentPage;
-    data['from'] = this.from;
-    data['path'] = this.path;
-    data['per_page'] = this.perPage;
-    data['to'] = this.to;
     return data;
   }
 }
