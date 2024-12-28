@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fahrplan/models/fahrplan/daily.dart';
 import 'package:fahrplan/services/bluetooth_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
@@ -9,7 +10,7 @@ import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Hive.initFlutter();
+  await _initHive();
 
   await initializeService();
   runApp(const App());
@@ -24,6 +25,11 @@ class App extends StatelessWidget {
       home: HomePage(),
     );
   }
+}
+
+Future<void> _initHive() async {
+  await Hive.initFlutter();
+  Hive.registerAdapter(FahrplanDailyItemAdapter());
 }
 
 // this will be used as notification channel id
@@ -84,6 +90,8 @@ Future<void> onStart(ServiceInstance service) async {
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
+  BluetoothManager(); // initialize bluetooth manager singleton
+
   // bring to foreground
   Timer.periodic(const Duration(seconds: 30), (timer) async {
     if (service is AndroidServiceInstance) {
@@ -103,8 +111,6 @@ Future<void> onStart(ServiceInstance service) async {
         );
       }
     }
-
-    final bt = BluetoothManager();
   });
 }
 

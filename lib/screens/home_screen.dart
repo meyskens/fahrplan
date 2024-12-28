@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:fahrplan/screens/settings_screen.dart';
+import 'package:fahrplan/widgets/current_fahrplan.dart';
 import 'package:flutter/material.dart';
 import '../services/bluetooth_manager.dart';
 
@@ -98,6 +99,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
+          CurrentFahrplan(),
         ],
       ),
     );
