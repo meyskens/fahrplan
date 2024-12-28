@@ -14,11 +14,14 @@ class SettingsPage extends StatelessWidget {
       body: ListView(
         children: [
           ListTile(
-            title: const Row(children: [
-              Icon(Icons.train),
-              SizedBox(width: 10),
-              Text('Träwelling'),
-            ]),
+            title: Row(
+              children: [
+                Icon(Icons.train),
+                SizedBox(width: 10),
+                Text('Träwelling'),
+              ],
+            ),
+            trailing: Icon(Icons.chevron_right),
             onTap: () {
               Navigator.push(
                 context,
@@ -28,11 +31,14 @@ class SettingsPage extends StatelessWidget {
             },
           ),
           ListTile(
-            title: const Row(children: [
-              Icon(Icons.bug_report),
-              SizedBox(width: 10),
-              Text('Debug'),
-            ]),
+            title: Row(
+              children: [
+                Icon(Icons.bug_report),
+                SizedBox(width: 10),
+                Text('Debug'),
+              ],
+            ),
+            trailing: Icon(Icons.chevron_right),
             onTap: () {
               Navigator.push(
                 context,
