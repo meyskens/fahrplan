@@ -175,13 +175,20 @@ class TraewellingWidget implements FahrplanWidget {
     }
 
     if (currentTrains.isEmpty) {
-      if (DateTime.parse(response.data?.first.train?.destination?.arrivalReal ??
-              response.data?.first.train?.destination?.arrivalPlanned ??
-              '')
-          .isBefore(DateTime.now().add(Duration(minutes: 10)))) {
+      final String arrival =
+          response.data!.first.train!.destination!.arrivalReal ??
+              response.data!.first.train!.destination!.arrivalPlanned ??
+              '';
+      if (arrival.isEmpty) {
+        return [];
+      }
+      if (DateTime.parse(arrival)
+          .add(Duration(minutes: 10))
+          .isAfter(DateTime.now())) {
         final stationId = response.data?.first.train?.destination?.id;
         if (stationId != null) {
-          return await _generateDeparture(stationId.toString(), null);
+          return await _generateDeparture(
+              stationId.toString(), response.data?.first.train);
         }
       }
       return [];
