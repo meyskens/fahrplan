@@ -65,7 +65,7 @@ class App {
     if (json['list'] != null) {
       list = <AppItem>[];
       json['list'].forEach((v) {
-        list!.add(new AppItem.fromJson(v));
+        list!.add(AppItem.fromJson(v));
       });
     }
     enable = json['enable'];
