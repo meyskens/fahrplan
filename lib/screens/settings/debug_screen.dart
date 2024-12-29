@@ -2,6 +2,7 @@ import 'package:fahrplan/models/g1/calendar.dart';
 import 'package:fahrplan/models/g1/dashboard.dart';
 import 'package:fahrplan/models/g1/note.dart';
 import 'package:fahrplan/models/g1/notification.dart';
+import 'package:fahrplan/models/g1/time_weather.dart';
 import 'package:fahrplan/services/bluetooth_manager.dart';
 import 'package:fahrplan/utils/bitmap.dart';
 import 'package:flutter/material.dart';
@@ -16,6 +17,8 @@ class DebugPage extends StatefulWidget {
 class _DebugPageSate extends State<DebugPage> {
   final TextEditingController _textController = TextEditingController();
   final BluetoothManager bluetoothManager = BluetoothManager();
+
+  int _seqId = 0;
 
   void _sendText() async {
     String text = _textController.text;
@@ -130,6 +133,23 @@ class _DebugPageSate extends State<DebugPage> {
     }
   }
 
+  void _debugTimeCommand() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.sendCommandToGlasses(
+        TimeAndWeather(
+          temperatureUnit: TemperatureUnit.CELSIUS,
+          timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
+          temperatureInCelsius: 10,
+          weatherIcon: WeatherIcons.SUNNY,
+        ).buildAddCommand(_seqId++),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -184,6 +204,11 @@ class _DebugPageSate extends State<DebugPage> {
           ElevatedButton(
             onPressed: _testCalendar,
             child: const Text("Test Calendar"),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: _debugTimeCommand,
+            child: const Text("Debug Time/Weather Command"),
           ),
         ],
       ),
