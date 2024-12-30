@@ -6,6 +6,16 @@ The name "Fahrplan" comes from the german word for "bus/train/conference schedul
 
 While it is meant to offer an "OS" for the Even Realities G1 and will copy some of the original functionality like notifications it is not designed to be a full smartglasses OS.
 
+## Features
+
+* Notification mirroring (app whitelist still needs to be build in official app, fixed soon)
+* Update of time and weather 
+* [Träwelling](https://traewelling.de/) integration for real time train info
+* Daily: a daily "fahrplan" presented in G1 dashboard
+* Stops: important one off-timers presenting an immediate text message for an important timed action (eg. leave for train)
+* Debug screen: with extra fun like bad apple! (unzip assets/badapple.zip first before compiling for this)
+
+
 ## Why the G1 specifically?
 
 Simple: they are the only glasses with display that fit my face and are able to ship my prescription. That's it.
