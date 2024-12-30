@@ -1,3 +1,4 @@
+import 'package:fahrplan/screens/settings/dashboard_screen.dart';
 import 'package:fahrplan/screens/settings/debug_screen.dart';
 import 'package:fahrplan/screens/settings/traewelling_screen.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,23 @@ class SettingsPage extends StatelessWidget {
       ),
       body: ListView(
         children: [
+          ListTile(
+            title: Row(
+              children: [
+                Icon(Icons.dashboard),
+                SizedBox(width: 10),
+                Text('G1 Dashboard'),
+              ],
+            ),
+            trailing: Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => DashboardSettingsPage()),
+              );
+            },
+          ),
           ListTile(
             title: Row(
               children: [
