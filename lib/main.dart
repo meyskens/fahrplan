@@ -1,15 +1,37 @@
 import 'dart:async';
 
 import 'package:fahrplan/models/fahrplan/daily.dart';
+import 'package:fahrplan/models/fahrplan/stop.dart';
 import 'package:fahrplan/services/bluetooth_manager.dart';
+import 'package:fahrplan/services/stops_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'screens/home_screen.dart';
 
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  flutterLocalNotificationsPlugin.initialize(
+    InitializationSettings(
+      android: AndroidInitializationSettings('branding'),
+    ),
+    onDidReceiveNotificationResponse: (NotificationResponse resp) async {
+      debugPrint('onDidReceiveBackgroundNotificationResponse: $resp');
+      if (resp.actionId == null) {
+        return;
+      }
+      if (resp.actionId!.startsWith("delete_")) {
+        _handleDeleteAction(resp.actionId!);
+      }
+    },
+    onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+  );
+
   await _initHive();
 
   await initializeService();
@@ -29,8 +51,10 @@ class App extends StatelessWidget {
 
 Future<void> _initHive() async {
   Hive.registerAdapter(FahrplanDailyItemAdapter());
+  Hive.registerAdapter(FahrplanStopItemAdapter());
   await Hive.initFlutter();
   await Hive.openBox<FahrplanDailyItem>('fahrplanDailyBox');
+  await Hive.openBox<FahrplanStopItem>('fahrplanStopBox');
 }
 
 // this will be used as notification channel id
@@ -40,8 +64,6 @@ const notificationChannelId = 'my_foreground';
 const notificationId = 888;
 
 Future<void> initializeService() async {
-  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
   flutterLocalNotificationsPlugin
       .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>()
@@ -88,10 +110,22 @@ Future<void> onStart(ServiceInstance service) async {
   // Only available for flutter 3.0.0 and later
   //DartPluginRegistrant.ensureInitialized();
 
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
+  try {
+    await Hive.initFlutter();
+    _initHive();
+  } catch (e) {
+    debugPrint('Hive already initialized');
+  }
+
+  if (!Hive.isBoxOpen('fahrplanDailyBox')) {
+    await Hive.openBox<FahrplanDailyItem>('fahrplanDailyBox');
+  }
+  if (!Hive.isBoxOpen('fahrplanStopBox')) {
+    await Hive.openBox<FahrplanStopItem>('fahrplanStopBox');
+  }
 
   BluetoothManager(); // initialize bluetooth manager singleton
+  StopsManager().reload(); // initialize bluetooth manager singleton
 
   // bring to foreground
   Timer.periodic(const Duration(seconds: 30), (timer) async {
@@ -123,4 +157,36 @@ void startBackgroundService() {
 void stopBackgroundService() {
   final service = FlutterBackgroundService();
   service.invoke("stop");
+}
+
+@pragma('vm:entry-point')
+void notificationTapBackground(NotificationResponse notificationResponse) {
+  debugPrint('notificationTapBackground: $notificationResponse');
+  if (notificationResponse.actionId == null) {
+    return;
+  }
+
+  if (notificationResponse.actionId!.startsWith("delete_")) {
+    _handleDeleteAction(notificationResponse.actionId!);
+  }
+
+  // handle action
+}
+
+void _handleDeleteAction(String actionId) async {
+  if (actionId.startsWith("delete_")) {
+    final id = actionId.split("_")[1];
+    await Hive.openBox<FahrplanStopItem>('fahrplanStopBox');
+    final box = Hive.box<FahrplanStopItem>('fahrplanStopBox');
+    debugPrint('Deleting item with id: $id');
+    for (var i = 0; i < box.length; i++) {
+      final item = box.getAt(i);
+      if (item!.uuid == id) {
+        debugPrint('Deleting item: $i');
+        await box.deleteAt(i);
+        break;
+      }
+    }
+    StopsManager().reload();
+  }
 }

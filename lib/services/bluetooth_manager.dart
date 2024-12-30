@@ -284,7 +284,12 @@ class BluetoothManager {
 
     for (int i = 0; i < packets.length; i++) {
       await sendCommandToGlasses(packets[i]);
-      await Future.delayed(delay);
+      if (i < 2) {
+        // init packet
+        await Future.delayed(Duration(milliseconds: 300));
+      } else {
+        await Future.delayed(delay);
+      }
     }
   }
 
