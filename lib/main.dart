@@ -28,8 +28,9 @@ class App extends StatelessWidget {
 }
 
 Future<void> _initHive() async {
-  await Hive.initFlutter();
   Hive.registerAdapter(FahrplanDailyItemAdapter());
+  await Hive.initFlutter();
+  await Hive.openBox<FahrplanDailyItem>('fahrplanDailyBox');
 }
 
 // this will be used as notification channel id

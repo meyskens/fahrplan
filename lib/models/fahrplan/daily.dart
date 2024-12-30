@@ -6,11 +6,11 @@ part 'daily.g.dart';
 @HiveType(typeId: 0)
 class FahrplanDailyItem {
   @HiveField(0)
-  final String title;
+  String title;
   @HiveField(1)
-  final int? hour;
+  int? hour;
   @HiveField(2)
-  final int? minute;
+  int? minute;
 
   FahrplanDailyItem({
     required this.title,

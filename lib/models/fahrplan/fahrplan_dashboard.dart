@@ -1,7 +1,9 @@
+import 'package:fahrplan/models/fahrplan/daily.dart';
 import 'package:fahrplan/models/fahrplan/widgets/fahrplan_widget.dart';
 import 'package:fahrplan/models/fahrplan/widgets/traewelling.dart';
 import 'package:fahrplan/models/g1/note.dart';
 import 'package:flutter/foundation.dart';
+import 'package:hive/hive.dart';
 
 class FahrplanItem {
   final String title;
@@ -27,23 +29,21 @@ class FahrplanDashboard {
   }
   FahrplanDashboard._internal();
 
-  List<FahrplanItem> items = [
-    FahrplanItem(title: "Get dressed", hour: 8, minute: 0),
-    FahrplanItem(title: "Breakfast + meds", hour: 8, minute: 10),
-    FahrplanItem(title: "Leave to FJE", hour: 9, minute: 20),
-    FahrplanItem(title: "Train to FN", hour: 9, minute: 40),
-    FahrplanItem(title: "Lunch", hour: 12, minute: 0),
-    FahrplanItem(title: "Dinner", hour: 18, minute: 0),
-    FahrplanItem(title: "Shower", hour: 21, minute: 0),
-    FahrplanItem(title: "Go cuddle a Rosahaj", hour: 22, minute: 0),
-    FahrplanItem(title: "Go cuddle a Rosahaj", hour: 23, minute: 59),
-  ];
+  List<FahrplanItem> items = [];
 
   List<FahrplanWidget> widgets = [
     TraewellingWidget(),
   ];
 
+  Future<void> _loadItems() async {
+    items.clear();
+
+    final fahrplanDailyBox = Hive.box<FahrplanDailyItem>('fahrplanDailyBox');
+    items.addAll(fahrplanDailyBox.values.map((e) => e.toFahrplanItem()));
+  }
+
   Future<List<Note>> generateDashboardItems() async {
+    await _loadItems();
     _sortItemsByTime();
 
     widgets.sort((a, b) => a.getPriority().compareTo(b.getPriority()));
