@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:fahrplan/screens/fahrplan_daily.dart';
+import 'package:fahrplan/screens/fahrplan_stop.dart';
 import 'package:fahrplan/screens/settings_screen.dart';
 import 'package:fahrplan/widgets/current_fahrplan.dart';
 import 'package:flutter/material.dart';
@@ -104,7 +105,10 @@ class _HomePageState extends State<HomePage> {
           ListTile(
             title: Row(
               children: [
-                Icon(Icons.sunny),
+                Image(
+                  image: AssetImage('assets/icons/reference.png'),
+                  height: 20,
+                ),
                 SizedBox(width: 10),
                 Text('Daily Items'),
               ],
@@ -114,6 +118,25 @@ class _HomePageState extends State<HomePage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => FahrplanDailyPage()),
+              );
+            },
+          ),
+          ListTile(
+            title: Row(
+              children: [
+                Image(
+                  image: AssetImage('assets/icons/stop.png'),
+                  height: 20,
+                ),
+                SizedBox(width: 10),
+                Text('Stop Items'),
+              ],
+            ),
+            trailing: Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => FahrplanStopPage()),
               );
             },
           ),

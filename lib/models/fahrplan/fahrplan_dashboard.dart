@@ -1,4 +1,5 @@
 import 'package:fahrplan/models/fahrplan/daily.dart';
+import 'package:fahrplan/models/fahrplan/stop.dart';
 import 'package:fahrplan/models/fahrplan/widgets/fahrplan_widget.dart';
 import 'package:fahrplan/models/fahrplan/widgets/traewelling.dart';
 import 'package:fahrplan/models/g1/note.dart';
@@ -35,11 +36,25 @@ class FahrplanDashboard {
     TraewellingWidget(),
   ];
 
+  bool _isToday(DateTime time) {
+    final now = DateTime.now();
+    return time.year == now.year &&
+        time.month == now.month &&
+        time.day == now.day;
+  }
+
   Future<void> _loadItems() async {
     items.clear();
 
     final fahrplanDailyBox = Hive.box<FahrplanDailyItem>('fahrplanDailyBox');
     items.addAll(fahrplanDailyBox.values.map((e) => e.toFahrplanItem()));
+
+    final fahrplanStopBox = Hive.box<FahrplanStopItem>('fahrplanStopBox');
+    final todayStops = fahrplanStopBox.values
+        .where((element) =>
+            _isToday(element.time) && element.time.isAfter(DateTime.now()))
+        .toList();
+    items.addAll(todayStops.map((e) => e.toFahrplanItem()));
   }
 
   Future<List<Note>> generateDashboardItems() async {
