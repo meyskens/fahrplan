@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fahrplan/screens/fahrplan_daily.dart';
 import 'package:fahrplan/screens/settings_screen.dart';
 import 'package:fahrplan/widgets/current_fahrplan.dart';
 import 'package:flutter/material.dart';
@@ -100,6 +101,22 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           CurrentFahrplan(),
+          ListTile(
+            title: Row(
+              children: [
+                Icon(Icons.sunny),
+                SizedBox(width: 10),
+                Text('Daily Items'),
+              ],
+            ),
+            trailing: Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => FahrplanDailyPage()),
+              );
+            },
+          ),
         ],
       ),
     );
