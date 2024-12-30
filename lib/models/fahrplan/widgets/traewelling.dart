@@ -74,8 +74,8 @@ class TraewellingWidget implements FahrplanWidget {
     if (response.data == null || response.data!.isEmpty) {
       return [];
     }
-    // filter all non "nationalExpress" "national" "regionalExp" "regional" "suburban"
 
+    // filter all non "nationalExpress" "national" "regionalExp" "regional" "suburban"
     final filteredData = response.data!
         .where((element) =>
             _allowedProducts.contains(element.line?.product ?? '') &&
@@ -95,8 +95,8 @@ class TraewellingWidget implements FahrplanWidget {
     filteredData.removeWhere((element) =>
         element.line == null ||
         element.line?.name == null ||
-        (element.line!.name!.startsWith("EUR")) ||
-        (element.line!.name!.startsWith("EST")));
+        element.line!.name!.startsWith("EUR") ||
+        element.line!.name!.startsWith("EST"));
 
     // remove trains that leave before our current train arrives
     if (currentTrain != null) {
@@ -134,7 +134,7 @@ class TraewellingWidget implements FahrplanWidget {
       String destination = item.destination?.name ?? '';
       // shorten destination name
       if (destination.length > 10) {
-        destination = '${destination.substring(0, 10)}...';
+        destination = '${destination.substring(0, 10).trim()}...';
       }
 
       text +=
