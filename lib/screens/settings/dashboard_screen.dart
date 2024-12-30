@@ -79,7 +79,7 @@ class DashboardSettingsPageState extends State<DashboardSettingsPage> {
             ),
             SizedBox(height: 20),
             Text(
-              'Weather data is provided by your favority weather app on Android using the Gadgetbridge protocol.',
+              'Weather data is provided by your favorite weather app on Android using the Gadgetbridge protocol.',
               style: TextStyle(fontSize: 16),
             ),
             GestureDetector(
