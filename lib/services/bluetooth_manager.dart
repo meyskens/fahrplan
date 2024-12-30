@@ -5,6 +5,7 @@ import 'package:fahrplan/models/fahrplan/fahrplan_dashboard.dart';
 import 'package:fahrplan/models/g1/bmp.dart';
 import 'package:fahrplan/models/g1/crc.dart';
 import 'package:fahrplan/models/g1/dashboard.dart';
+import 'package:fahrplan/services/dashboard_controller.dart';
 import 'package:fahrplan/models/g1/note.dart';
 import 'package:fahrplan/models/g1/notification.dart';
 import 'package:fahrplan/models/g1/text.dart';
@@ -42,6 +43,7 @@ class BluetoothManager {
   }
 
   FahrplanDashboard fahrplanDashboard = FahrplanDashboard();
+  DashboardController dashboardController = DashboardController();
 
   Timer? _syncTimer;
 
@@ -450,6 +452,11 @@ class BluetoothManager {
     final notes = await fahrplanDashboard.generateDashboardItems();
     for (var note in notes) {
       await sendNote(note);
+    }
+
+    final dash = await dashboardController.updateDashboardCommand();
+    for (var command in dash) {
+      await sendCommandToGlasses(command);
     }
   }
 }
