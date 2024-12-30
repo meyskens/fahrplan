@@ -1,6 +1,3 @@
-import 'dart:typed_data';
-
-import 'package:fahrplan/models/g1/commands.dart';
 import 'package:flutter/foundation.dart';
 
 class WeatherIcons {
@@ -21,6 +18,123 @@ class WeatherIcons {
   static const int TORNADO = 0x0E;
   static const int FREEZING_RAIN = 0x0F;
   static const int SUNNY = 0x10;
+
+  static int fromOpenWeatherMapConditionCode(int owpCode) {
+    switch (owpCode) {
+      case 200:
+        return WeatherIcons.THUNDER;
+      case 201:
+        return WeatherIcons.THUNDERSTORM;
+      case 202:
+        return WeatherIcons.THUNDERSTORM;
+      case 210:
+        return WeatherIcons.THUNDERSTORM;
+      case 211:
+        return WeatherIcons.THUNDERSTORM;
+      case 212:
+        return WeatherIcons.THUNDERSTORM;
+      case 221:
+        return WeatherIcons.THUNDERSTORM;
+      case 230:
+        return WeatherIcons.THUNDERSTORM;
+      case 231:
+        return WeatherIcons.THUNDERSTORM;
+      case 232:
+        return WeatherIcons.THUNDERSTORM;
+      case 300:
+        return WeatherIcons.DRIZZLE;
+      case 301:
+        return WeatherIcons.DRIZZLE;
+      case 302:
+        return WeatherIcons.HEAVY_DRIZZLE;
+      case 310:
+        return WeatherIcons.DRIZZLE;
+      case 311:
+        return WeatherIcons.DRIZZLE;
+      case 312:
+        return WeatherIcons.HEAVY_DRIZZLE;
+      case 313:
+        return WeatherIcons.DRIZZLE;
+      case 314:
+        return WeatherIcons.HEAVY_DRIZZLE;
+      case 321:
+        return WeatherIcons.DRIZZLE;
+      case 500:
+        return WeatherIcons.RAIN;
+      case 501:
+        return WeatherIcons.RAIN;
+      case 502:
+        return WeatherIcons.HEAVY_RAIN;
+      case 503:
+        return WeatherIcons.HEAVY_RAIN;
+      case 504:
+        return WeatherIcons.HEAVY_RAIN;
+      case 511:
+        return WeatherIcons.FREEZING_RAIN;
+      case 520:
+        return WeatherIcons.FREEZING_RAIN;
+      case 521:
+        return WeatherIcons.HEAVY_RAIN;
+      case 522:
+        return WeatherIcons.HEAVY_RAIN;
+      case 531:
+        return WeatherIcons.RAIN;
+      case 600:
+        return WeatherIcons.SNOW;
+      case 601:
+        return WeatherIcons.SNOW;
+      case 602:
+        return WeatherIcons.SNOW;
+      case 611:
+        return WeatherIcons.SNOW;
+      case 612:
+        return WeatherIcons.SNOW;
+      case 613:
+        return WeatherIcons.SNOW;
+      case 615:
+        return WeatherIcons.SNOW;
+      case 616:
+        return WeatherIcons.SNOW;
+      case 620:
+        return WeatherIcons.SNOW;
+      case 621:
+        return WeatherIcons.SNOW;
+      case 622:
+        return WeatherIcons.SNOW;
+      case 701:
+        return WeatherIcons.MIST;
+      case 711:
+        return WeatherIcons.MIST;
+      case 721:
+        return WeatherIcons.MIST;
+      case 731:
+        return WeatherIcons.MIST;
+      case 741:
+        return WeatherIcons.FOG;
+      case 751:
+        return WeatherIcons.SAND;
+      case 761:
+        return WeatherIcons.SAND;
+      case 762:
+        return WeatherIcons.SAND;
+      case 771:
+        return WeatherIcons.SQUALLS;
+      case 781:
+        return WeatherIcons.TORNADO;
+      case 800:
+        return WeatherIcons.SUNNY;
+      case 801:
+        return WeatherIcons.SUNNY;
+      case 802:
+        return WeatherIcons.CLOUDS;
+      case 803:
+        return WeatherIcons.CLOUDS;
+      case 804:
+        return WeatherIcons.CLOUDS;
+      default: // unknown
+        return WeatherIcons.NOTHING;
+    }
+  }
 }
 
 enum TemperatureUnit { CELSIUS, FAHRENHEIT }

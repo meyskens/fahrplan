@@ -1,3 +1,4 @@
+import 'package:fahrplan/models/android/weather_data.dart';
 import 'package:fahrplan/models/g1/calendar.dart';
 import 'package:fahrplan/models/g1/dashboard.dart';
 import 'package:fahrplan/models/g1/note.dart';
@@ -135,12 +136,22 @@ class _DebugPageSate extends State<DebugPage> {
 
   void _debugTimeCommand() async {
     if (bluetoothManager.isConnected) {
+      int temp = 5;
+      int weatherIcon = WeatherIcons.SUNNY;
+
+      final weather = await WeatherProvider.getWeather();
+      if (weather != null) {
+        temp = (weather.currentTemp ?? 0) - 273; // currentTemp is in kelvin
+        weatherIcon = WeatherIcons.fromOpenWeatherMapConditionCode(
+            weather.currentConditionCode ?? 0);
+      }
+
       await bluetoothManager.sendCommandToGlasses(
         TimeAndWeather(
           temperatureUnit: TemperatureUnit.CELSIUS,
           timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
-          temperatureInCelsius: 10,
-          weatherIcon: WeatherIcons.SUNNY,
+          temperatureInCelsius: temp,
+          weatherIcon: weatherIcon,
         ).buildAddCommand(_seqId++),
       );
     } else {
