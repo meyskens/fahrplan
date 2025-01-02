@@ -207,22 +207,28 @@ class TraewellingWidget implements FahrplanWidget {
 
     DateTime departurePlanned =
         DateTime.parse(train.origin?.departurePlanned ?? '');
-    DateTime departureReal = DateTime.parse(train.origin?.departureReal ?? '');
+    DateTime? departureReal = train.origin?.departureReal == null
+        ? null
+        : DateTime.parse(train.origin!.departureReal!);
     DateTime arrivalPlanned =
         DateTime.parse(train.destination?.arrivalPlanned ?? '');
-    DateTime arrivalReal = DateTime.parse(train.destination?.arrivalReal ?? '');
+    DateTime? arrivalReal = train.destination?.arrivalReal == null
+        ? null
+        : DateTime.parse(train.destination!.arrivalReal!);
 
     String departureTime =
         DateFormat('HH:mm').format(departurePlanned.toLocal());
     // if departureReal is at least 1 minute after planned note the delay with (+X)
-    if (departureReal.difference(departurePlanned).inMinutes >= 1) {
+    if (departureReal != null &&
+        departureReal.difference(departurePlanned).inMinutes >= 1) {
       departureTime +=
           ' (+${departureReal.difference(departurePlanned).inMinutes} ${DateFormat('HH:mm').format(departureReal.toLocal())})';
     }
 
     String arrivalTime = DateFormat('HH:mm').format(arrivalPlanned.toLocal());
     // if arrivalReal is at least 1 minute after planned note the delay with (+X)
-    if (arrivalReal.difference(arrivalPlanned).inMinutes >= 1) {
+    if (arrivalReal != null &&
+        arrivalReal.difference(arrivalPlanned).inMinutes >= 1) {
       arrivalTime +=
           ' (+${arrivalReal.difference(arrivalPlanned).inMinutes} ${DateFormat('HH:mm').format(arrivalReal.toLocal())})';
     }
@@ -256,8 +262,8 @@ class TraewellingWidget implements FahrplanWidget {
       name: '[${train.lineName}] to ${train.destination?.name}',
       text:
           '[$departureTime] ${train.origin?.name} pl. ${train.origin?.departurePlatformReal ?? train.origin?.departurePlatformPlanned ?? ''}\n'
-          'Operator: ${train.operator?.name}\n'
-          'dist: ${distance.round()}km  pts: ${train.points}  dur: $duration\n'
+          'Operator: ${train.operator?.name ?? 'Unknown'}\n'
+          'dist: ${distance.round()}km  pts: ${train.points ?? 0}  dur: $duration\n'
           '-> [$arrivalTime] ($remainingDuration) ${train.destination?.name} pl. ${train.destination?.arrivalPlatformReal ?? train.destination?.arrivalPlanned ?? ''}',
     ));
 
