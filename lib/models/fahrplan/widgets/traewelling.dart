@@ -267,7 +267,7 @@ class TraewellingWidget implements FahrplanWidget {
           '[$departureTime] ${train.origin?.name} pl. ${train.origin?.departurePlatformReal ?? train.origin?.departurePlatformPlanned ?? ''}\n'
           'Operator: ${train.operator?.name ?? 'Unknown'}\n'
           'dist: ${distance.round()}km  pts: ${train.points ?? 0}  dur: $duration\n'
-          '-> [$arrivalTime] ($remainingDuration) ${train.destination?.name} pl. ${train.destination?.arrivalPlatformReal ?? train.destination?.arrivalPlanned ?? ''}',
+          '-> [$arrivalTime] ($remainingDuration) ${train.destination?.name} pl. ${train.destination?.arrivalPlatformReal ?? train.destination?.arrivalPlatformPlanned ?? ''}',
     ));
 
     return notes;
