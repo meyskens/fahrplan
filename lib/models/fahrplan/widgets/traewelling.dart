@@ -103,6 +103,9 @@ class TraewellingWidget implements FahrplanWidget {
       filteredData.removeWhere((element) {
         DateTime plannedWhen = DateTime.parse(element.plannedWhen ?? '');
         plannedWhen = plannedWhen.add(Duration(minutes: element.delay ?? 0));
+        plannedWhen = plannedWhen.add(Duration(
+            minutes:
+                2)); // add 2 minutes change time, would be 5 but Switzerland is a thing!
         DateTime arrival = DateTime.parse(
             currentTrain.destination?.arrivalReal ??
                 currentTrain.destination?.arrivalPlanned ??
