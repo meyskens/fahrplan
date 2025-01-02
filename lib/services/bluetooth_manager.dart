@@ -520,6 +520,19 @@ class BluetoothManager {
       await sendNote(note);
     }
 
+    // remove other notes if there are less than 4
+    // so old notes are not shown
+    if (notes.length < 4) {
+      for (int i = notes.length; i < 4; i++) {
+        final note = Note(
+          noteNumber: i + 1,
+          name: 'Empty',
+          text: '',
+        );
+        await sendCommandToGlasses(note.buildDeleteCommand());
+      }
+    }
+
     final dash = await dashboardController.updateDashboardCommand();
     for (var command in dash) {
       await sendCommandToGlasses(command);

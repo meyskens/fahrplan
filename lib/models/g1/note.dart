@@ -84,4 +84,25 @@ class Note {
 
     return Uint8List.fromList(command);
   }
+
+  Uint8List buildDeleteCommand() {
+    return Uint8List.fromList([
+      0x1E,
+      0x10,
+      0x00,
+      0xE0,
+      0x03,
+      0x01,
+      0x00,
+      0x01,
+      0x00,
+      noteNumber,
+      0x00,
+      0x01,
+      0x00,
+      0x01,
+      0x00,
+      0x00,
+    ]);
+  }
 }
