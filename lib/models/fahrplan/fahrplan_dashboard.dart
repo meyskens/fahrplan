@@ -5,6 +5,7 @@ import 'package:fahrplan/models/fahrplan/widgets/traewelling.dart';
 import 'package:fahrplan/models/g1/note.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class FahrplanItem {
   final String title;
@@ -36,6 +37,23 @@ class FahrplanDashboard {
     TraewellingWidget(),
   ];
 
+  bool _initialized = false;
+
+  Future<void> initialize() async {
+    if (_initialized) {
+      return;
+    }
+
+    await Hive.openBox<FahrplanDailyItem>('fahrplanDailyBox');
+    try {
+      await Hive.openLazyBox<FahrplanStopItem>('fahrplanStopBox');
+    } catch (e) {
+      debugPrint('Error while registering adapter: $e');
+    }
+
+    _initialized = true;
+  }
+
   bool _isToday(DateTime time) {
     final now = DateTime.now();
     return time.year == now.year &&
@@ -44,13 +62,21 @@ class FahrplanDashboard {
   }
 
   Future<void> _loadItems() async {
+    await initialize();
     items.clear();
 
     final fahrplanDailyBox = Hive.box<FahrplanDailyItem>('fahrplanDailyBox');
     items.addAll(fahrplanDailyBox.values.map((e) => e.toFahrplanItem()));
 
-    final fahrplanStopBox = Hive.box<FahrplanStopItem>('fahrplanStopBox');
-    final todayStops = fahrplanStopBox.values
+    final fahrplanStopBox = Hive.lazyBox<FahrplanStopItem>('fahrplanStopBox');
+    final List<FahrplanStopItem> stops = [];
+    for (var i = 0; i < fahrplanStopBox.length; i++) {
+      final item = await fahrplanStopBox.getAt(i);
+      if (item != null) {
+        stops.add(item);
+      }
+    }
+    final todayStops = stops
         .where((element) =>
             _isToday(element.time) && element.time.isAfter(DateTime.now()))
         .toList();

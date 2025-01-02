@@ -10,11 +10,13 @@ import 'package:fahrplan/models/g1/note.dart';
 import 'package:fahrplan/models/g1/notification.dart';
 import 'package:fahrplan/models/g1/text.dart';
 import 'package:fahrplan/services/notifications_listener.dart';
+import 'package:fahrplan/services/stops_manager.dart';
 import 'package:fahrplan/utils/utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:notification_listener_service/notification_event.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import '../utils/constants.dart';
 import '../models/g1/glass.dart';
@@ -28,10 +30,10 @@ import '../models/g1/glass.dart';
 typedef OnUpdate = void Function(String message);
 
 class BluetoothManager {
-  static final BluetoothManager _singleton = BluetoothManager._internal();
+  static final BluetoothManager singleton = BluetoothManager._internal();
 
   factory BluetoothManager() {
-    return _singleton;
+    return singleton;
   }
 
   BluetoothManager._internal() {
@@ -44,6 +46,7 @@ class BluetoothManager {
 
   FahrplanDashboard fahrplanDashboard = FahrplanDashboard();
   DashboardController dashboardController = DashboardController();
+  StopsManager stopsManager = StopsManager();
 
   Timer? _syncTimer;
 
@@ -60,6 +63,31 @@ class BluetoothManager {
   bool _isScanning = false;
   int _retryCount = 0;
   static const int maxRetries = 3;
+
+  Future<String?> _getLastG1UsedUid(GlassSide side) async {
+    final pref = await SharedPreferences.getInstance();
+    return pref.getString(side == GlassSide.left ? 'left' : 'right');
+  }
+
+  Future<String?> _getLastG1UsedName(GlassSide side) async {
+    final pref = await SharedPreferences.getInstance();
+    return pref.getString(side == GlassSide.left ? 'leftName' : 'rightName');
+  }
+
+  Future<void> _saveLastG1Used(GlassSide side, String name, String uid) async {
+    final pref = await SharedPreferences.getInstance();
+    await pref.setString(side == GlassSide.left ? 'left' : 'right', uid);
+    await pref.setString(
+        side == GlassSide.left ? 'leftName' : 'rightName', name);
+  }
+
+  Future<void> initialize() async {
+    await fahrplanDashboard.initialize();
+    stopsManager.reload();
+    _syncTimer ??= Timer.periodic(const Duration(minutes: 1), (timer) {
+      _sync();
+    });
+  }
 
   Future<void> _requestPermissions() async {
     if (!Platform.isAndroid && !Platform.isIOS) {
@@ -84,10 +112,42 @@ class BluetoothManager {
     }
   }
 
+  Future<void> attemptReconnectFromStorage() async {
+    await initialize();
+
+    final leftUid = await _getLastG1UsedUid(GlassSide.left);
+    final rightUid = await _getLastG1UsedUid(GlassSide.right);
+
+    if (leftUid != null) {
+      leftGlass = Glass(
+        name: await _getLastG1UsedName(GlassSide.left) ?? 'Left Glass',
+        device: BluetoothDevice(remoteId: DeviceIdentifier(leftUid)),
+        side: GlassSide.left,
+      );
+      await leftGlass!.connect();
+      _setReconnect(leftGlass!);
+    }
+
+    if (rightUid != null) {
+      rightGlass = Glass(
+        name: await _getLastG1UsedName(GlassSide.right) ?? 'Right Glass',
+        device: BluetoothDevice(remoteId: DeviceIdentifier(rightUid)),
+        side: GlassSide.right,
+      );
+      await rightGlass!.connect();
+      _setReconnect(rightGlass!);
+    }
+  }
+
   Future<void> startScanAndConnect({
     required OnUpdate onUpdate,
   }) async {
-    await _requestPermissions();
+    try {
+      // this will fail in backround mode
+      await _requestPermissions();
+    } catch (e) {
+      onUpdate(e.toString());
+    }
 
     if (!await FlutterBluePlus.isAvailable) {
       onUpdate('Bluetooth is not available');
@@ -109,10 +169,6 @@ class BluetoothManager {
   }
 
   Future<void> _startScan(OnUpdate onUpdate) async {
-    _syncTimer ??= Timer.periodic(const Duration(minutes: 1), (timer) {
-      _sync();
-    });
-
     await FlutterBluePlus.stopScan();
     debugPrint('Starting new scan attempt ${_retryCount + 1}/$maxRetries');
 
@@ -169,6 +225,7 @@ class BluetoothManager {
       );
       leftGlass = glass;
       onUpdate("Left glass found: ${glass.name}");
+      await _saveLastG1Used(GlassSide.left, glass.name, glass.device.id.id);
     } else if (deviceName.contains('_R_') && rightGlass == null) {
       debugPrint('Found right glass: $deviceName');
       glass = Glass(
@@ -178,19 +235,12 @@ class BluetoothManager {
       );
       rightGlass = glass;
       onUpdate("Right glass found: ${glass.name}");
+      await _saveLastG1Used(GlassSide.right, glass.name, glass.device.id.id);
     }
     if (glass != null) {
       await glass.connect();
 
-      // Monitor connection
-      glass.device.connectionState.listen((BluetoothConnectionState state) {
-        debugPrint('[${glass!.side} Glass] Connection state: $state');
-        if (state == BluetoothConnectionState.disconnected) {
-          debugPrint(
-              '[${glass.side} Glass] Disconnected, attempting to reconnect...');
-          glass.connect();
-        }
-      });
+      _setReconnect(glass);
     }
 
     // Stop scanning if both glasses are found
@@ -199,6 +249,17 @@ class BluetoothManager {
       stopScanning();
       _sync();
     }
+  }
+
+  void _setReconnect(Glass glass) {
+    glass.device.connectionState.listen((BluetoothConnectionState state) {
+      debugPrint('[${glass!.side} Glass] Connection state: $state');
+      if (state == BluetoothConnectionState.disconnected) {
+        debugPrint(
+            '[${glass.side} Glass] Disconnected, attempting to reconnect...');
+        glass.connect();
+      }
+    });
   }
 
   void _handleScanTimeout(OnUpdate onUpdate) async {
