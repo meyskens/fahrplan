@@ -33,8 +33,11 @@ void main() async {
   );
 
   await _initHive();
-
   await initializeService();
+
+  await BluetoothManager.singleton.initialize();
+  BluetoothManager.singleton.attemptReconnectFromStorage();
+
   runApp(const App());
 }
 
@@ -53,8 +56,6 @@ Future<void> _initHive() async {
   Hive.registerAdapter(FahrplanDailyItemAdapter());
   Hive.registerAdapter(FahrplanStopItemAdapter());
   await Hive.initFlutter();
-  await Hive.openBox<FahrplanDailyItem>('fahrplanDailyBox');
-  await Hive.openBox<FahrplanStopItem>('fahrplanStopBox');
 }
 
 // this will be used as notification channel id
@@ -91,7 +92,7 @@ Future<void> initializeService() async {
 
       // auto start service
       autoStart: true,
-      isForegroundMode: true,
+      isForegroundMode: false,
 
       notificationChannelId:
           notificationChannelId, // this must match with notification channel you created above.
@@ -110,23 +111,26 @@ Future<void> onStart(ServiceInstance service) async {
   // Only available for flutter 3.0.0 and later
   //DartPluginRegistrant.ensureInitialized();
 
-  try {
-    await Hive.initFlutter();
-    _initHive();
-  } catch (e) {
-    debugPrint('Hive already initialized');
-  }
+  // try {
+  //   await Hive.initFlutter();
+  //   _initHive();
+  // } catch (e) {
+  //   debugPrint('Hive already initialized');
+  // }
 
-  if (!Hive.isBoxOpen('fahrplanDailyBox')) {
-    await Hive.openBox<FahrplanDailyItem>('fahrplanDailyBox');
-  }
-  if (!Hive.isBoxOpen('fahrplanStopBox')) {
-    await Hive.openBox<FahrplanStopItem>('fahrplanStopBox');
-  }
+  // if (!Hive.isBoxOpen('fahrplanDailyBox')) {
+  //   await Hive.openBox<FahrplanDailyItem>('fahrplanDailyBox');
+  // }
+  // if (!Hive.isBoxOpen('fahrplanStopBox')) {
+  //   await Hive.openLazyBox<FahrplanStopItem>('fahrplanStopBox');
+  // }
 
-  BluetoothManager(); // initialize bluetooth manager singleton
-  StopsManager().reload(); // initialize bluetooth manager singleton
-
+  // final bt =
+  //     BluetoothManager.singleton; // initialize bluetooth manager singleton
+  // await bt.initialize();
+  // if (!bt.isConnected) {
+  //   bt.attemptReconnectFromStorage();
+  // }
   // bring to foreground
   Timer.periodic(const Duration(seconds: 30), (timer) async {
     if (service is AndroidServiceInstance) {
@@ -176,14 +180,19 @@ void notificationTapBackground(NotificationResponse notificationResponse) {
 void _handleDeleteAction(String actionId) async {
   if (actionId.startsWith("delete_")) {
     final id = actionId.split("_")[1];
-    await Hive.openBox<FahrplanStopItem>('fahrplanStopBox');
-    final box = Hive.box<FahrplanStopItem>('fahrplanStopBox');
+    try {
+      await Hive.openBox<FahrplanStopItem>('fahrplanStopBox');
+    } catch (e) {
+      debugPrint('Hive box already open');
+    }
+    final box = Hive.lazyBox<FahrplanStopItem>('fahrplanStopBox');
     debugPrint('Deleting item with id: $id');
     for (var i = 0; i < box.length; i++) {
-      final item = box.getAt(i);
+      final item = await box.getAt(i);
       if (item!.uuid == id) {
         debugPrint('Deleting item: $i');
         await box.deleteAt(i);
+        await box.flush();
         break;
       }
     }

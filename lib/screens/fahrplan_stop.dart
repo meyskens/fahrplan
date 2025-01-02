@@ -11,18 +11,25 @@ class FahrplanStopPage extends StatefulWidget {
 }
 
 class FahrplanStopPageState extends State<FahrplanStopPage> {
-  late Box<FahrplanStopItem> _fahrplanStopBox;
+  late LazyBox<FahrplanStopItem> _fahrplanStopBox;
   StopsManager stopsManager = StopsManager();
 
   @override
   void initState() {
     super.initState();
-    _fahrplanStopBox = Hive.box<FahrplanStopItem>('fahrplanStopBox');
+    _fahrplanStopBox = Hive.lazyBox<FahrplanStopItem>('fahrplanStopBox');
   }
 
   Future<void> _sortBox() async {
-    final items = _fahrplanStopBox.values.toList()
-      ..sort((a, b) => a.time.compareTo(b.time));
+    final List<FahrplanStopItem> items = [];
+    for (int i = 0; i < _fahrplanStopBox.length; i++) {
+      final item = await _fahrplanStopBox.getAt(i);
+      if (item != null) {
+        items.add(item);
+      }
+    }
+
+    items.sort((a, b) => a.time.compareTo(b.time));
     await _fahrplanStopBox.clear();
     await _fahrplanStopBox.addAll(items);
 
@@ -98,8 +105,8 @@ class FahrplanStopPageState extends State<FahrplanStopPage> {
     );
   }
 
-  void _editItem(int index) {
-    final item = _fahrplanStopBox.getAt(index);
+  void _editItem(int index) async {
+    final item = await _fahrplanStopBox.getAt(index);
     if (item == null) return;
 
     showDialog(
@@ -201,6 +208,17 @@ class FahrplanStopPageState extends State<FahrplanStopPage> {
     );
   }
 
+  Future<List<FahrplanStopItem>> _getItems() async {
+    final List<FahrplanStopItem> items = [];
+    for (int i = 0; i < _fahrplanStopBox.length; i++) {
+      final item = await _fahrplanStopBox.getAt(i);
+      if (item != null) {
+        items.add(item);
+      }
+    }
+    return items;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -213,36 +231,42 @@ class FahrplanStopPageState extends State<FahrplanStopPage> {
           ),
         ],
       ),
-      body: ValueListenableBuilder(
-        valueListenable: _fahrplanStopBox.listenable(),
-        builder: (context, Box<FahrplanStopItem> box, _) {
-          final items = box.values.toList()
-            ..sort((a, b) => a.time.compareTo(b.time));
-
-          return ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return ListTile(
-                title: Text(item.title),
-                subtitle: Text(
-                    '${item.time.year}-${item.time.month.toString().padLeft(2, '0')}-${item.time.day.toString().padLeft(2, '0')} ${item.time.hour.toString().padLeft(2, '0')}:${item.time.minute.toString().padLeft(2, '0')}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.edit),
-                      onPressed: () => _editItem(index),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.delete),
-                      onPressed: () => _deleteItem(index),
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
+      body: FutureBuilder<List<FahrplanStopItem>>(
+        future: _getItems(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(child: Text('No stops available'));
+          } else {
+            final items = snapshot.data!;
+            return ListView.builder(
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return ListTile(
+                  title: Text(item.title),
+                  subtitle: Text(
+                      '${item.time.year}-${item.time.month.toString().padLeft(2, '0')}-${item.time.day.toString().padLeft(2, '0')} ${item.time.hour.toString().padLeft(2, '0')}:${item.time.minute.toString().padLeft(2, '0')}'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.edit),
+                        onPressed: () => _editItem(index),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete),
+                        onPressed: () => _deleteItem(index),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          }
         },
       ),
     );
