@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fahrplan/models/fahrplan/calendar.dart';
 import 'package:fahrplan/models/fahrplan/daily.dart';
 import 'package:fahrplan/models/fahrplan/stop.dart';
 import 'package:fahrplan/services/bluetooth_manager.dart';
@@ -55,6 +56,7 @@ class App extends StatelessWidget {
 Future<void> _initHive() async {
   Hive.registerAdapter(FahrplanDailyItemAdapter());
   Hive.registerAdapter(FahrplanStopItemAdapter());
+  Hive.registerAdapter(FahrplanCalendarAdapter());
   await Hive.initFlutter();
 }
 
