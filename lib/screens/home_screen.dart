@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fahrplan/screens/calendars_screen.dart';
 import 'package:fahrplan/screens/fahrplan_daily.dart';
 import 'package:fahrplan/screens/fahrplan_stop.dart';
 import 'package:fahrplan/screens/settings_screen.dart';
@@ -137,6 +138,25 @@ class _HomePageState extends State<HomePage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => FahrplanStopPage()),
+              );
+            },
+          ),
+          ListTile(
+            title: Row(
+              children: [
+                Image(
+                  image: AssetImage('assets/icons/groen.png'),
+                  height: 20,
+                ),
+                SizedBox(width: 10),
+                Text('Calendar Integration'),
+              ],
+            ),
+            trailing: Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CalendarsPage()),
               );
             },
           ),

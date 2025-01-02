@@ -1,3 +1,4 @@
+import 'package:fahrplan/models/fahrplan/calendar.dart';
 import 'package:fahrplan/models/fahrplan/daily.dart';
 import 'package:fahrplan/models/fahrplan/stop.dart';
 import 'package:fahrplan/models/fahrplan/widgets/fahrplan_widget.dart';
@@ -45,6 +46,7 @@ class FahrplanDashboard {
     }
 
     await Hive.openBox<FahrplanDailyItem>('fahrplanDailyBox');
+    await Hive.openBox<FahrplanCalendar>('fahrplanCalendarBox');
     try {
       await Hive.openLazyBox<FahrplanStopItem>('fahrplanStopBox');
     } catch (e) {
@@ -76,6 +78,11 @@ class FahrplanDashboard {
         stops.add(item);
       }
     }
+
+    final calComposer = FahrplanCalendarComposer();
+    final calendarItems = await calComposer.toFahrplanItems();
+    items.addAll(calendarItems);
+
     final todayStops = stops
         .where((element) =>
             _isToday(element.time) && element.time.isAfter(DateTime.now()))
