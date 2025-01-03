@@ -1,6 +1,8 @@
 import 'package:fahrplan/screens/settings/dashboard_screen.dart';
 import 'package:fahrplan/screens/settings/debug_screen.dart';
+import 'package:fahrplan/screens/settings/homeassistant_screen.dart';
 import 'package:fahrplan/screens/settings/traewelling_screen.dart';
+import 'package:fahrplan/screens/settings/whisper_screen.dart';
 import 'package:flutter/material.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -45,6 +47,39 @@ class SettingsPage extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                     builder: (context) => TraewellingSettingsPage()),
+              );
+            },
+          ),
+          ListTile(
+            title: Row(
+              children: [
+                Icon(Icons.home),
+                SizedBox(width: 10),
+                Text('HomeAssistant'),
+              ],
+            ),
+            trailing: Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => HomeAssistantSettingsPage()),
+              );
+            },
+          ),
+          ListTile(
+            title: Row(
+              children: [
+                Icon(Icons.mic),
+                SizedBox(width: 10),
+                Text('Whisper'),
+              ],
+            ),
+            trailing: Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => WhisperSettingsPage()),
               );
             },
           ),
