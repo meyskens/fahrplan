@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:fahrplan/models/fahrplan/whispermodel.dart';
+import 'package:fahrplan/models/fahrplan/widgets/homassistant.dart';
 import 'package:fahrplan/models/g1/even_ai.dart';
 import 'package:fahrplan/models/g1/glass.dart';
 import 'package:fahrplan/models/g1/commands.dart';
@@ -9,6 +11,7 @@ import 'package:fahrplan/services/bluetooth_manager.dart';
 import 'package:fahrplan/utils/lc3.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'package:whisper_flutter_new/whisper_flutter_new.dart';
 
@@ -85,7 +88,6 @@ class BluetoothReciever {
         debugPrint('[$side] Stop Even AI recording');
         voiceCollector.isRecording = false;
         await bt.setMicrophone(false);
-        //sendDummyAIResponse();
 
         List<int> completeVoiceData = voiceCollector.getAllData();
         if (completeVoiceData.isEmpty) {
@@ -108,7 +110,9 @@ class BluetoothReciever {
         debugPrint(
             '[$side] Transcription took: ${endTime.difference(startTime).inSeconds} seconds');
 
-        await bt.sendText(transcription);
+        final HomeAssistantWidget ha = HomeAssistantWidget();
+        final resp = await ha.handleQuery(transcription);
+        await bt.sendText(resp);
         break;
 
       default:
@@ -136,49 +140,6 @@ class BluetoothReciever {
     if (!voiceCollector.isRecording) {
       bt.setMicrophone(false);
     }
-  }
-
-  void sendDummyAIResponse() async {
-    final bt = BluetoothManager();
-
-    int pageNumber = 1;
-    int maxPages = 1;
-    int screenStatus = ScreenAction.NEW_CONTENT | AIStatus.DISPLAYING;
-    int seq = 0;
-    String textMessage = 'Hello, world!';
-
-    SendResultPacket result = SendResultPacket(
-      command: Commands.SEND_RESULT,
-      seq: seq,
-      totalPackages: 1,
-      currentPackage: 0,
-      screenStatus: screenStatus,
-      newCharPos0: 0,
-      newCharPos1: 0,
-      pageNumber: pageNumber,
-      maxPages: maxPages,
-      data: utf8.encode(textMessage),
-    );
-    await bt.sendCommandToGlasses(result.build());
-
-    // sleep 5
-    await Future.delayed(Duration(seconds: 5));
-    // send exit to dashboard
-
-    screenStatus = AIStatus.DISPLAY_COMPLETE;
-    SendResultPacket end = SendResultPacket(
-      command: Commands.SEND_RESULT,
-      seq: seq,
-      totalPackages: 1,
-      currentPackage: 0,
-      screenStatus: screenStatus,
-      newCharPos0: 0,
-      newCharPos1: 0,
-      pageNumber: pageNumber,
-      maxPages: maxPages,
-      data: utf8.encode(textMessage),
-    );
-    await bt.sendCommandToGlasses(end.build());
   }
 
   Future<String> transcribe(Uint8List voiceData) async {
@@ -228,13 +189,16 @@ class BluetoothReciever {
       (dataSize >> 8) & 0xff,
       (dataSize >> 16) & 0xff,
       (dataSize >> 24) & 0xff,
-    ];  
+    ];
     header.addAll(voiceData.toList());
 
     await File(wavPath).writeAsBytes(Uint8List.fromList(header));
 
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
     final Whisper whisper = Whisper(
-        model: WhisperModel.base,
+        model:
+            FahrplanWhisperModel(prefs.getString('whisper_model') ?? '').model,
         downloadHost:
             "https://huggingface.co/ggerganov/whisper.cpp/resolve/main");
 
@@ -244,12 +208,18 @@ class BluetoothReciever {
     final transcription = await whisper.transcribe(
       transcribeRequest: TranscribeRequest(
         audio: wavPath,
-        isTranslate: false, // Translate result from audio lang to english text
-        isNoTimestamps: true, // Get segments in result
-        splitOnWord: false, // Split segments on each word
+        isTranslate: false,
+        isNoTimestamps: true,
+        splitOnWord: true,
+        diarize: false,
+        isSpecialTokens: false,
+        nProcessors: 2,
       ),
     );
-
+    // remove all [.*] tags
+    transcription.text = transcription.text.replaceAll(RegExp(r'\[.*?\]'), '');
+    // remove all double spaces
+    transcription.text = transcription.text.replaceAll(RegExp(r' {2,}'), ' ');
     return transcription.text;
   }
 }
@@ -265,7 +235,7 @@ class VoiceDataCollector {
     if (seq == 255) {
       seqAdd += 255;
     }
-    _chunks[seqAdd+seq] = data;
+    _chunks[seqAdd + seq] = data;
   }
 
   List<int> getAllData() {
