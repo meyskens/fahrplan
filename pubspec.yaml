@@ -51,6 +51,7 @@ dependencies:
   url_launcher: ^6.3.1
   uuid: ^4.5.1
   device_calendar: ^4.3.3
+  whisper_flutter_new: ^1.0.1
 
 dev_dependencies:
   flutter_test:

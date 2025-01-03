@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "dev.maartje.fahrplan"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "27.0.11902837"
 
   
     compileOptions {
@@ -22,16 +22,26 @@ android {
         jvmTarget = JavaVersion.VERSION_1_8
     }
 
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "dev.maartje.fahrplan"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 24 // needed for ffmpeg
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled true
+        ndk {
+            abiFilters  'armeabi-v7a', 'arm64-v8a'
+        }
     }
 
     buildTypes {

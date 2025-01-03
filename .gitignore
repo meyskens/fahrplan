@@ -70,3 +70,5 @@ app.*.map.json
 /android/app/release
 
 assets/badapple/
+
+.cxx/

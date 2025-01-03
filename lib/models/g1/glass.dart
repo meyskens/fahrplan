@@ -2,7 +2,7 @@ import 'package:fahrplan/models/g1/commands.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'dart:async';
-import '../../services/reciever.dart';
+import '../../services/bluetooth_reciever.dart';
 import '../../utils/constants.dart';
 
 enum GlassSide { left, right }
@@ -22,7 +22,7 @@ class Glass {
 
   get isConnected => device.isConnected;
 
-  StreamController<Uint8List> replies = StreamController<Uint8List>();
+  BluetoothReciever reciever = BluetoothReciever.singleton;
 
   Glass({
     required this.name,
@@ -81,14 +81,14 @@ class Glass {
   }
 
   void handleNotification(List<int> data) async {
-    String hexData =
-        data.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
-    debugPrint('[$side Glass] Received data: $hexData');
+    //String hexData =
+    //    data.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
+    //debugPrint('[$side Glass] Received data: $hexData');
     // Call the receive handler function
 
-    replies.add(Uint8List.fromList(data));
+    //replies.add(Uint8List.fromList(data));
 
-    await receiveHandler(side, data);
+    await reciever.receiveHandler(side, data);
   }
 
   Future<void> sendData(List<int> data) async {
