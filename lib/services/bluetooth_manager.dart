@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:android_package_manager/android_package_manager.dart';
 import 'package:fahrplan/models/fahrplan/fahrplan_dashboard.dart';
 import 'package:fahrplan/models/g1/bmp.dart';
+import 'package:fahrplan/models/g1/commands.dart';
 import 'package:fahrplan/models/g1/crc.dart';
 import 'package:fahrplan/models/g1/dashboard.dart';
 import 'package:fahrplan/services/dashboard_controller.dart';
@@ -82,6 +83,7 @@ class BluetoothManager {
   }
 
   Future<void> initialize() async {
+    FlutterBluePlus.setLogLevel(LogLevel.none);
     await fahrplanDashboard.initialize();
     stopsManager.reload();
     _syncTimer ??= Timer.periodic(const Duration(minutes: 1), (timer) {
@@ -537,5 +539,13 @@ class BluetoothManager {
     for (var command in dash) {
       await sendCommandToGlasses(command);
     }
+  }
+
+  Future<void> setMicrophone(bool open) async {
+    final subCommand = open ? 0x01 : 0x00;
+
+    // for an unknown issue the microphone will not close when sent to the left side
+    // to work around this we send the command to the right side only
+    await rightGlass!.sendData([Commands.OPEN_MIC, subCommand]);
   }
 }
