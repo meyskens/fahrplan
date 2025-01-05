@@ -15,6 +15,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+        
+      - name: setup keystore
+        run: echo "$KEY_BASE64" | base64 -d > android/app/keystore.jks
+        with:
+          KEY_BASE64: ${{ secrets.KEY_BASE64 }}
+      
+      - name: setup key.properties
+        run: echo "$KEY_PROPERTIES" > android/key.properties
+        with:
+          KEY_PROPERTIES: ${{ secrets.KEY_PROPERTIES }}
 
       - name: Set up Flutter
         run: flutter doctor
