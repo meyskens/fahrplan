@@ -96,7 +96,7 @@ class VoiceNoteNotification {
           (crcBytes[2] << 16) +
           (crcBytes[3] << 24);
 
-      entries.add(VoiceNote(index, timestamp, crc));
+      entries.add(VoiceNote(index: index, timestamp: timestamp, crc: crc));
     }
   }
 }
