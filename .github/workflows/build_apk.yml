@@ -3,7 +3,7 @@ name: Build and Upload APK
 on:
   push:
     branches:
-      - ci-test
+      - main
 
 jobs:
   build:
