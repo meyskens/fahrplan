@@ -257,7 +257,7 @@ class BluetoothReciever {
   }
 
   void handleQuickNoteAudioData(GlassSide side, List<int> data) async {
-    if (data.length < 10) {
+    if (data.length > 4 && data[4] == 0x02) {
       final dataStr = data.map((e) => e.toRadixString(16)).join(' ');
       debugPrint('[$side] not an audio data packet: $dataStr');
       return;
@@ -272,6 +272,10 @@ class BluetoothReciever {
     audio_response_packet_buf[9] = audio_index_in_flash + 1;
     audio_response_packet_buf[10 .. n] = <audio-data>
     */
+    if (data.length < 10) {
+      debugPrint('[$side] Invalid audio data packet');
+      return;
+    }
 
     int seq = data[3];
     int totalPackets = (data[5] << 8) | data[4];
