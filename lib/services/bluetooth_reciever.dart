@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:fahrplan/models/fahrplan/checklist.dart';
 import 'package:fahrplan/models/fahrplan/whispermodel.dart';
 import 'package:fahrplan/models/fahrplan/widgets/homassistant.dart';
 import 'package:fahrplan/models/g1/glass.dart';
@@ -290,6 +291,11 @@ class BluetoothReciever {
 
       debugPrint('[$side] Voice data decoded: ${pcm.length} bytes');
 
+      voiceCollectorNote.reset();
+      final bt = BluetoothManager();
+      await bt.rightGlass!
+          .sendData(VoiceNote(index: index + 1).buildDeleteCommand(_syncId++));
+
       final startTime = DateTime.now();
       final transcription = await transcribe(pcm);
       final endTime = DateTime.now();
@@ -297,11 +303,27 @@ class BluetoothReciever {
       debugPrint('[$side] Transcription: $transcription');
       debugPrint(
           '[$side] Transcription took: ${endTime.difference(startTime).inSeconds} seconds');
-
-      voiceCollectorNote.reset();
-      final bt = BluetoothManager();
-      await bt.sendCommandToGlasses(
-          VoiceNote(index: index).buildDeleteCommand(_syncId++));
+      if (transcription.toLowerCase().contains("close checklist")) {
+        debugPrint('[$side] Checklist close request detected');
+        final list = FahrplanChecklist.hideChecklistFor(transcription
+            .toLowerCase()
+            .replaceAll("close checklist", "")
+            .replaceAll(".", "")
+            .trim());
+        if (list != null) {
+          bt.sync();
+        }
+      } else if (transcription.toLowerCase().contains("checklist")) {
+        debugPrint('[$side] Checklist request detected');
+        final list = FahrplanChecklist.displayChecklistFor(transcription
+            .toLowerCase()
+            .replaceAll("checklist", "")
+            .replaceAll(".", "")
+            .trim());
+        if (list != null) {
+          bt.sync();
+        }
+      }
     }
   }
 }

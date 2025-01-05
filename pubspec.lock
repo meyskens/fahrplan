@@ -238,6 +238,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.3.3"
+  duration_picker:
+    dependency: "direct main"
+    description:
+      name: duration_picker
+      sha256: e505a749c93f3218aa4194d339e5d5480d927df23a81f075b5282511f6ac11ab
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.0"
   fake_async:
     dependency: transitive
     description:
@@ -389,6 +397,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.0"
+  fuzzywuzzy:
+    dependency: "direct main"
+    description:
+      name: fuzzywuzzy
+      sha256: "3004379ffd6e7f476a0c2091f38f16588dc45f67de7adf7c41aa85dec06b432c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.0"
   glob:
     dependency: transitive
     description:

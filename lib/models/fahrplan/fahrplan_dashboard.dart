@@ -1,4 +1,7 @@
+import 'dart:math';
+
 import 'package:fahrplan/models/fahrplan/calendar.dart';
+import 'package:fahrplan/models/fahrplan/checklist.dart';
 import 'package:fahrplan/models/fahrplan/daily.dart';
 import 'package:fahrplan/models/fahrplan/stop.dart';
 import 'package:fahrplan/models/fahrplan/widgets/fahrplan_widget.dart';
@@ -34,7 +37,7 @@ class FahrplanDashboard {
 
   List<FahrplanItem> items = [];
 
-  List<FahrplanWidget> widgets = [
+  List<FahrplanWidget> installedWidgets = [
     TraewellingWidget(),
   ];
 
@@ -47,6 +50,7 @@ class FahrplanDashboard {
 
     await Hive.openBox<FahrplanDailyItem>('fahrplanDailyBox');
     await Hive.openBox<FahrplanCalendar>('fahrplanCalendarBox');
+    await Hive.openBox<FahrplanChecklist>('fahrplanChecklistBox');
     try {
       await Hive.openLazyBox<FahrplanStopItem>('fahrplanStopBox');
     } catch (e) {
@@ -90,15 +94,33 @@ class FahrplanDashboard {
     items.addAll(todayStops.map((e) => e.toFahrplanItem()));
   }
 
+  List<FahrplanWidget> _getChecklists() {
+    final List<FahrplanWidget> widgets = [];
+    final fahrplanChecklistBox =
+        Hive.box<FahrplanChecklist>('fahrplanChecklistBox');
+    final allChecklists = fahrplanChecklistBox.values.toList();
+    for (var list in allChecklists) {
+      if (list.isShown) {
+        widgets.add(list);
+      }
+    }
+
+    return widgets;
+  }
+
   Future<List<Note>> generateDashboardItems() async {
     await _loadItems();
     _sortItemsByTime();
 
+    var widgets = installedWidgets.toList();
     widgets.sort((a, b) => a.getPriority().compareTo(b.getPriority()));
 
     final List<Note> notes = _turnItemsIntoNotes();
     debugPrint('Got ${notes.length} notes from items');
     final List<Note> widgetNotes = [];
+
+    final checklists = _getChecklists();
+    widgets = [...checklists, ...widgets];
 
     for (var widget in widgets) {
       try {
