@@ -17,6 +17,9 @@ While it is meant to offer an "OS" for the Even Realities G1 and will copy some 
 * Checklists: open and close lists on your dashboard by holding the right button (QuickNote) saying "checklist <name>" or "close checklist <name>"
 * Debug screen: with extra fun like bad apple! (unzip assets/badapple.zip first before compiling for this)
 
+## Get it!
+
+- Latest build of the main branch: [Android APK](https://nightly.link/meyskens/fahrplan/workflows/build_apk/main/app-release.apk.zip)
 
 ## Why the G1 specifically?
 
