@@ -32,7 +32,7 @@ Simple: they are the only glasses with display that fit my face and are able to 
 - Linux will not work: experiments have been done with Bluez but BLE notifications are buggy, sorry 
 
 ## Thanks
-Thanks to @emingenc and @NyasakiAT for their work in building the G1 BLE libraries 
+Thanks to @emingenc and @NyasakiAT for their work in building the G1 BLE libraries, also thanks a lot to benny04409 for helping with reverse engineering the firmware.
 - https://github.com/emingenc/even_glasses (The most complete library!)
 - https://github.com/emingenc/g1_flutter_blue_plus/tree/main (The foundations for the Dart implementation)
 - https://github.com/NyasakiAT/G1-Navigate (Further development of the Dart implementation and BMP composing code)
