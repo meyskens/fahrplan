@@ -1,0 +1,74 @@
+name: Build and Upload APK
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    container:
+      image: registry.gitlab.com/theonewiththebraid/flutter-dockerimages:3.27.0-android-x86_64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: setup keystore
+        run: echo "$KEY_BASE64" | base64 -d > android/app/keystore.jks
+        env:
+          KEY_BASE64: ${{ secrets.KEY_BASE64 }}
+      
+      - name: setup key.properties
+        run: echo "$KEY_PROPERTIES" > android/key.properties
+        env:
+          KEY_PROPERTIES: ${{ secrets.KEY_PROPERTIES }}
+
+      - name: Set up Flutter
+        run: flutter doctor
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download APK
+        uses: actions/download-artifact@v2
+        with:
+          name: app-release.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build/app/outputs/flutter-apk/app-release.apk
+          asset_name: app-release.apk
+          asset_content_type: application/vnd.android.package-archive
