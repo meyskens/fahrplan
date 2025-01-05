@@ -3,10 +3,9 @@ import 'dart:io';
 
 import 'package:fahrplan/models/fahrplan/whispermodel.dart';
 import 'package:fahrplan/models/fahrplan/widgets/homassistant.dart';
-import 'package:fahrplan/models/g1/even_ai.dart';
 import 'package:fahrplan/models/g1/glass.dart';
 import 'package:fahrplan/models/g1/commands.dart';
-import 'package:fahrplan/models/g1/text.dart';
+import 'package:fahrplan/models/g1/voice_note.dart';
 import 'package:fahrplan/services/bluetooth_manager.dart';
 import 'package:fahrplan/utils/lc3.dart';
 import 'package:flutter/foundation.dart';
@@ -22,7 +21,10 @@ const int RESPONSE_FAILURE = 0xCA;
 class BluetoothReciever {
   static final BluetoothReciever singleton = BluetoothReciever._internal();
 
-  final voiceCollector = VoiceDataCollector();
+  final voiceCollectorAI = VoiceDataCollector();
+  final voiceCollectorNote = VoiceDataCollector();
+
+  int _syncId = 0;
 
   factory BluetoothReciever() {
     return singleton;
@@ -60,6 +62,12 @@ class BluetoothReciever {
           handleVoiceData(side, seq, voiceData);
         }
         break;
+      case Commands.QUICK_NOTE:
+        handleQuickNoteCommand(side, data);
+        break;
+      case Commands.QUICK_NOTE_ADD:
+        handleQuickNoteAudioData(side, data);
+        break;
 
       default:
         debugPrint('[$side] Unknown command: 0x${command.toRadixString(16)}');
@@ -72,29 +80,30 @@ class BluetoothReciever {
       case 0:
         debugPrint('[$side] Exit to dashboard manually');
         await bt.setMicrophone(false);
-        voiceCollector.isRecording = false;
+        voiceCollectorAI.isRecording = false;
+        voiceCollectorAI.reset();
         break;
       case 1:
         debugPrint('[$side] Page ${side == 'left' ? 'up' : 'down'} control');
         await bt.setMicrophone(false);
-        voiceCollector.isRecording = false;
+        voiceCollectorAI.isRecording = false;
         break;
       case 23:
         debugPrint('[$side] Start Even AI');
-        voiceCollector.isRecording = true;
+        voiceCollectorAI.isRecording = true;
         await bt.setMicrophone(true);
         break;
       case 24:
         debugPrint('[$side] Stop Even AI recording');
-        voiceCollector.isRecording = false;
+        voiceCollectorAI.isRecording = false;
         await bt.setMicrophone(false);
 
-        List<int> completeVoiceData = voiceCollector.getAllData();
+        List<int> completeVoiceData = voiceCollectorAI.getAllData();
         if (completeVoiceData.isEmpty) {
           debugPrint('[$side] No voice data collected');
           return;
         }
-        voiceCollector.reset();
+        voiceCollectorAI.reset();
         debugPrint(
             '[$side] Voice data collected: ${completeVoiceData.length} bytes');
 
@@ -117,7 +126,6 @@ class BluetoothReciever {
 
       default:
         debugPrint('[$side] Unknown Even AI subcommand: $subcmd');
-      //await bt.setMicrophone(false);
     }
   }
 
@@ -135,9 +143,9 @@ class BluetoothReciever {
   void handleVoiceData(GlassSide side, int seq, List<int> voiceData) {
     debugPrint(
         '[$side] Received voice data chunk: seq=$seq, length=${voiceData.length}');
-    voiceCollector.addChunk(seq, voiceData);
+    voiceCollectorAI.addChunk(seq, voiceData);
     final bt = BluetoothManager();
-    if (!voiceCollector.isRecording) {
+    if (!voiceCollectorAI.isRecording) {
       bt.setMicrophone(false);
     }
   }
@@ -221,6 +229,76 @@ class BluetoothReciever {
     // remove all double spaces
     transcription.text = transcription.text.replaceAll(RegExp(r' {2,}'), ' ');
     return transcription.text;
+  }
+
+  void handleQuickNoteCommand(GlassSide side, List<int> data) {
+    try {
+      final notif = VoiceNoteNotification(Uint8List.fromList(data));
+      debugPrint('Voice note notification: ${notif.entries.length} entries');
+      for (VoiceNote entry in notif.entries) {
+        debugPrint(
+            'Voice note: index=${entry.index}, timestamp=${entry.timestamp}');
+      }
+      if (notif.entries.isNotEmpty) {
+        // fetch newest note
+        voiceCollectorNote.reset();
+        final entry = notif.entries.first;
+        final bt = BluetoothManager();
+        bt.rightGlass!.sendData(entry.buildFetchCommand(_syncId++));
+      }
+    } catch (e) {
+      debugPrint('Failed to parse voice note notification: $e');
+    }
+  }
+
+  void handleQuickNoteAudioData(GlassSide side, List<int> data) async {
+    if (data.length < 10) {
+      final dataStr = data.map((e) => e.toRadixString(16)).join(' ');
+      debugPrint('[$side] not an audio data packet: $dataStr');
+      return;
+    }
+    /*  audio_response_packet_buf[0] = 0x1E;
+    audio_response_packet_buf[1] = audio_chunk_size + 10; // total packet length
+    audio_response_packet_buf[2] = 0; // possibly packet-length extended to uint16_t
+    audio_response_packet_buf[3] = audio_sync_id++;
+    audio_response_packet_buf[4] = 2; // unknown, always 2
+    *(uint16_t*)&audio_response_packet_buf[5] = total_number_of_packets_for_audio;
+    *(uint16_t*)&audio_response_packet_buf[7] = ++current_packet_number;
+    audio_response_packet_buf[9] = audio_index_in_flash + 1;
+    audio_response_packet_buf[10 .. n] = <audio-data>
+    */
+
+    int seq = data[3];
+    int totalPackets = (data[5] << 8) | data[4];
+    int currentPacket = (data[7] << 8) | data[6];
+    int index = data[9] - 1;
+    List<int> voiceData = data.sublist(10);
+
+    debugPrint('[$side] Note Audio data packet: seq=$seq, total=$totalPackets, '
+        'current=$currentPacket, length=${voiceData.length}');
+    voiceCollectorNote.addChunk(seq, voiceData);
+
+    if (currentPacket + 2 == totalPackets) {
+      debugPrint('[$side] Last packet received');
+      final completeVoiceData = voiceCollectorNote.getAllData();
+
+      final pcm = await LC3.decodeLC3(Uint8List.fromList(completeVoiceData));
+
+      debugPrint('[$side] Voice data decoded: ${pcm.length} bytes');
+
+      final startTime = DateTime.now();
+      final transcription = await transcribe(pcm);
+      final endTime = DateTime.now();
+
+      debugPrint('[$side] Transcription: $transcription');
+      debugPrint(
+          '[$side] Transcription took: ${endTime.difference(startTime).inSeconds} seconds');
+
+      voiceCollectorNote.reset();
+      final bt = BluetoothManager();
+      await bt.sendCommandToGlasses(
+          VoiceNote(index: index).buildDeleteCommand(_syncId++));
+    }
   }
 }
 
