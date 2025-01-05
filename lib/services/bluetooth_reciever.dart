@@ -224,6 +224,10 @@ class BluetoothReciever {
         nProcessors: 2,
       ),
     );
+
+    // delete wav file
+    await File(wavPath).delete();
+
     // remove all [.*] tags
     transcription.text = transcription.text.replaceAll(RegExp(r'\[.*?\]'), '');
     // remove all double spaces
