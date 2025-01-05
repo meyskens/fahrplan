@@ -2,6 +2,7 @@ import 'package:fahrplan/screens/settings/dashboard_screen.dart';
 import 'package:fahrplan/screens/settings/debug_screen.dart';
 import 'package:fahrplan/screens/settings/homeassistant_screen.dart';
 import 'package:fahrplan/screens/settings/traewelling_screen.dart';
+import 'package:fahrplan/screens/settings/ui_settings.dart';
 import 'package:fahrplan/screens/settings/whisper_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -80,6 +81,22 @@ class SettingsPage extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => WhisperSettingsPage()),
+              );
+            },
+          ),
+          ListTile(
+            title: Row(
+              children: [
+                Icon(Icons.brush),
+                SizedBox(width: 10),
+                Text('UI'),
+              ],
+            ),
+            trailing: Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => UiSettingsPage()),
               );
             },
           ),
