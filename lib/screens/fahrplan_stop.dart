@@ -2,6 +2,7 @@ import 'package:fahrplan/models/fahrplan/stop.dart';
 import 'package:fahrplan/services/stops_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/intl.dart';
 
 class FahrplanStopPage extends StatefulWidget {
   const FahrplanStopPage({super.key});
@@ -40,66 +41,13 @@ class FahrplanStopPageState extends State<FahrplanStopPage> {
     showDialog(
       context: context,
       builder: (context) {
-        String title = '';
-        DateTime time = DateTime.now();
-        return AlertDialog(
-          title: Text('Add Stop'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: InputDecoration(labelText: 'Title'),
-                onChanged: (value) {
-                  title = value;
-                },
-              ),
-              SizedBox(height: 10),
-              ElevatedButton(
-                onPressed: () async {
-                  DateTime? pickedDate = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2101),
-                  );
-                  if (pickedDate != null) {
-                    TimeOfDay? pickedTime = await showTimePicker(
-                      context: context,
-                      initialTime: TimeOfDay.now(),
-                    );
-                    if (pickedTime != null) {
-                      setState(() {
-                        time = DateTime(
-                          pickedDate.year,
-                          pickedDate.month,
-                          pickedDate.day,
-                          pickedTime.hour,
-                          pickedTime.minute,
-                        );
-                      });
-                    }
-                  }
-                },
-                child: Text('Pick Date and Time'),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'Selected: ${time.year}-${time.month.toString().padLeft(2, '0')}-${time.day.toString().padLeft(2, '0')} ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                final newItem = FahrplanStopItem(title: title, time: time);
-                _fahrplanStopBox.add(newItem);
-                await _sortBox();
-                setState(() {});
-                Navigator.of(context).pop();
-              },
-              child: Text('Add'),
-            ),
-          ],
+        return _AddItemDialog(
+          onAdd: (title, time) async {
+            final newItem = FahrplanStopItem(title: title, time: time);
+            await _fahrplanStopBox.add(newItem);
+            await _sortBox();
+            setState(() {});
+          },
         );
       },
     );
@@ -107,76 +55,23 @@ class FahrplanStopPageState extends State<FahrplanStopPage> {
 
   void _editItem(int index) async {
     final item = await _fahrplanStopBox.getAt(index);
-    if (item == null) return;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        String title = item.title;
-        DateTime time = item.time;
-        return AlertDialog(
-          title: Text('Edit Stop'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: InputDecoration(labelText: 'Title'),
-                controller: TextEditingController(text: title),
-                onChanged: (value) {
-                  title = value;
-                },
-              ),
-              SizedBox(height: 10),
-              ElevatedButton(
-                onPressed: () async {
-                  DateTime? pickedDate = await showDatePicker(
-                    context: context,
-                    initialDate: time,
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2101),
-                  );
-                  if (pickedDate != null) {
-                    TimeOfDay? pickedTime = await showTimePicker(
-                      context: context,
-                      initialTime: TimeOfDay.fromDateTime(time),
-                    );
-                    if (pickedTime != null) {
-                      setState(() {
-                        time = DateTime(
-                          pickedDate.year,
-                          pickedDate.month,
-                          pickedDate.day,
-                          pickedTime.hour,
-                          pickedTime.minute,
-                        );
-                      });
-                    }
-                  }
-                },
-                child: Text('Pick Date and Time'),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'Selected: ${time.year}-${time.month.toString().padLeft(2, '0')}-${time.day.toString().padLeft(2, '0')} ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                item.title = title;
-                item.time = time;
-                await _fahrplanStopBox.putAt(index, item);
-                await _sortBox();
-                setState(() {});
-                Navigator.of(context).pop();
-              },
-              child: Text('Update'),
-            ),
-          ],
-        );
-      },
-    );
+    if (item != null) {
+      showDialog(
+        context: context,
+        builder: (context) {
+          return _AddItemDialog(
+            item: item,
+            onAdd: (title, time) async {
+              final newItem =
+                  FahrplanStopItem(title: title, time: time, uuid: item.uuid);
+              await _fahrplanStopBox.putAt(index, newItem);
+              await _sortBox();
+              setState(() {});
+            },
+          );
+        },
+      );
+    }
   }
 
   void _deleteItem(int index) {
@@ -269,6 +164,91 @@ class FahrplanStopPageState extends State<FahrplanStopPage> {
           }
         },
       ),
+    );
+  }
+}
+
+class _AddItemDialog extends StatefulWidget {
+  final Function(String, DateTime) onAdd;
+  final FahrplanStopItem? item;
+
+  const _AddItemDialog({required this.onAdd, this.item});
+
+  @override
+  _AddItemDialogState createState() => _AddItemDialogState();
+}
+
+class _AddItemDialogState extends State<_AddItemDialog> {
+  TextEditingController titleController = TextEditingController();
+  late DateTime time;
+
+  @override
+  void initState() {
+    super.initState();
+    titleController.text = widget.item?.title ?? '';
+    time = widget.item?.time ?? DateTime.now().add(Duration(hours: 1));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: widget.item == null ? Text('Add Stop') : Text('Edit Stop'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            decoration: InputDecoration(labelText: 'Title'),
+            controller: titleController,
+          ),
+          SizedBox(height: 10),
+          Row(
+            children: [
+              Text(
+                  'Time: ${DateFormat('yyyy-MM-dd HH:mm').format(time.toLocal())}'),
+              SizedBox(width: 10),
+              IconButton(
+                onPressed: () async {
+                  DateTime? pickedDate = await showDatePicker(
+                    context: context,
+                    initialDate: widget.item?.time ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2101),
+                  );
+                  if (pickedDate != null) {
+                    TimeOfDay? pickedTime = await showTimePicker(
+                      context: context,
+                      initialTime: widget.item != null
+                          ? TimeOfDay.fromDateTime(widget.item!.time)
+                          : TimeOfDay.now(),
+                    );
+                    if (pickedTime != null) {
+                      setState(() {
+                        time = DateTime(
+                          pickedDate.year,
+                          pickedDate.month,
+                          pickedDate.day,
+                          pickedTime.hour,
+                          pickedTime.minute,
+                        );
+                      });
+                    }
+                  }
+                },
+                icon: Icon(Icons.edit),
+              ),
+            ],
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            widget.onAdd(titleController.text, time);
+            Navigator.of(context).pop();
+          },
+          child: widget.item == null ? Text('Add') : Text('Save'),
+        ),
+      ],
     );
   }
 }
