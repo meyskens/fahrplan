@@ -146,7 +146,7 @@ class _HomePageState extends State<HomePage> {
             title: Row(
               children: [
                 Image(
-                  image: AssetImage('assets/icons/groen.png'),
+                  image: AssetImage('assets/icons/oorsprong.png'),
                   height: 20,
                 ),
                 SizedBox(width: 10),
