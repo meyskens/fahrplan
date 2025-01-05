@@ -5,6 +5,7 @@ import 'package:fahrplan/screens/checklist_screen.dart';
 import 'package:fahrplan/screens/fahrplan_daily.dart';
 import 'package:fahrplan/screens/fahrplan_stop.dart';
 import 'package:fahrplan/screens/settings_screen.dart';
+import 'package:fahrplan/utils/ui_perfs.dart';
 import 'package:fahrplan/widgets/current_fahrplan.dart';
 import 'package:flutter/material.dart';
 import '../services/bluetooth_manager.dart';
@@ -18,6 +19,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final BluetoothManager bluetoothManager = BluetoothManager();
+  final UiPerfs _ui = UiPerfs.singleton;
 
   @override
   void initState() {
@@ -60,7 +62,7 @@ class _HomePageState extends State<HomePage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => SettingsPage()),
-              );
+              ).then((_) => setState(() {}));
             },
           )
         ],
@@ -107,10 +109,12 @@ class _HomePageState extends State<HomePage> {
           ListTile(
             title: Row(
               children: [
-                Image(
-                  image: AssetImage('assets/icons/reference.png'),
-                  height: 20,
-                ),
+                _ui.trainNerdMode
+                    ? Image(
+                        image: AssetImage('assets/icons/reference.png'),
+                        height: 20,
+                      )
+                    : Icon(Icons.sunny),
                 SizedBox(width: 10),
                 Text('Daily Items'),
               ],
@@ -126,10 +130,12 @@ class _HomePageState extends State<HomePage> {
           ListTile(
             title: Row(
               children: [
-                Image(
-                  image: AssetImage('assets/icons/stop.png'),
-                  height: 20,
-                ),
+                _ui.trainNerdMode
+                    ? Image(
+                        image: AssetImage('assets/icons/stop.png'),
+                        height: 20,
+                      )
+                    : Icon(Icons.notifications),
                 SizedBox(width: 10),
                 Text('Stop Items'),
               ],
@@ -145,10 +151,12 @@ class _HomePageState extends State<HomePage> {
           ListTile(
             title: Row(
               children: [
-                Image(
-                  image: AssetImage('assets/icons/oorsprong.png'),
-                  height: 20,
-                ),
+                _ui.trainNerdMode
+                    ? Image(
+                        image: AssetImage('assets/icons/oorsprong.png'),
+                        height: 20,
+                      )
+                    : Icon(Icons.checklist),
                 SizedBox(width: 10),
                 Text('Checklists'),
               ],
@@ -165,10 +173,12 @@ class _HomePageState extends State<HomePage> {
           ListTile(
             title: Row(
               children: [
-                Image(
-                  image: AssetImage('assets/icons/groen.png'),
-                  height: 20,
-                ),
+                _ui.trainNerdMode
+                    ? Image(
+                        image: AssetImage('assets/icons/groen.png'),
+                        height: 20,
+                      )
+                    : Icon(Icons.calendar_today),
                 SizedBox(width: 10),
                 Text('Calendar Integration'),
               ],

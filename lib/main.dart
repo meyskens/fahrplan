@@ -6,6 +6,7 @@ import 'package:fahrplan/models/fahrplan/daily.dart';
 import 'package:fahrplan/models/fahrplan/stop.dart';
 import 'package:fahrplan/services/bluetooth_manager.dart';
 import 'package:fahrplan/services/stops_manager.dart';
+import 'package:fahrplan/utils/ui_perfs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -36,6 +37,7 @@ void main() async {
 
   await _initHive();
   await initializeService();
+  await UiPerfs.singleton.load();
 
   await BluetoothManager.singleton.initialize();
   BluetoothManager.singleton.attemptReconnectFromStorage();
