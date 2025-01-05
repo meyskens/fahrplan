@@ -25,6 +25,12 @@ jobs:
         run: echo "$KEY_PROPERTIES" > android/key.properties
         env:
           KEY_PROPERTIES: ${{ secrets.KEY_PROPERTIES }}
+      
+      - name: unzip badapple.zip
+        run: |
+          cd assets
+          unzip -o badapple.zip
+          cd ..
 
       - name: Set up Flutter
         run: flutter doctor
