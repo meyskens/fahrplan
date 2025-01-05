@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fahrplan/models/fahrplan/fahrplan_dashboard.dart';
 import 'package:fahrplan/models/g1/note.dart';
 import 'package:flutter/material.dart';
@@ -16,10 +18,23 @@ class _CurrentFahrplanState extends State<CurrentFahrplan> {
 
   int _selectedIndex = 0;
 
+  Timer? _refreshTimer;
+
   @override
   void initState() {
     super.initState();
     _refreshData();
+    _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      _refreshData();
+    });
+  }
+
+  @override
+  void dispose() {
+    if (_refreshTimer != null) {
+      _refreshTimer!.cancel();
+    }
+    super.dispose();
   }
 
   Future<void> _refreshData() async {
@@ -33,10 +48,25 @@ class _CurrentFahrplanState extends State<CurrentFahrplan> {
     return Card(
       child: Column(
         children: [
-          const Text('Current Fahrplan'),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: const Text('Current Fahrplan'),
+              ),
+              IconButton(onPressed: _refreshData, icon: Icon(Icons.refresh)),
+            ],
+          ),
+
           const Divider(),
           _dashboardItems.isNotEmpty
-              ? Text(_dashboardItems[_selectedIndex].text)
+              ? Column(
+                  children: [
+                    Text(_dashboardItems[_selectedIndex].name),
+                    Text(_dashboardItems[_selectedIndex].text),
+                  ],
+                )
               : Text("No items found"),
           const Divider(),
           // add next and previous buttons
