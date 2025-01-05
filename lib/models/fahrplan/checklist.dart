@@ -32,7 +32,7 @@ class FahrplanChecklist extends FahrplanWidget {
     int maxScore = 0;
     int index = -1;
     for (final list in allLists) {
-      final score = ratio(name, list.name);
+      final score = ratio(name.toLowerCase(), list.name.toLowerCase());
       debugPrint('Score for $name and ${list.name}: $score');
       if (score > maxScore) {
         maxScore = score;
