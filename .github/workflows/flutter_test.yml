@@ -1,0 +1,25 @@
+name: Flutter Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    container:
+      image: registry.gitlab.com/theonewiththebraid/flutter-dockerimages:3.27.0-android-x86_64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Flutter
+        run: flutter doctor
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test
