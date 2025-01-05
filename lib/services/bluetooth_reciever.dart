@@ -272,8 +272,9 @@ class BluetoothReciever {
     audio_response_packet_buf[9] = audio_index_in_flash + 1;
     audio_response_packet_buf[10 .. n] = <audio-data>
     */
-    if (data.length < 10) {
-      debugPrint('[$side] Invalid audio data packet');
+    if (data.length < 11) {
+      final dataStr = data.map((e) => e.toRadixString(16)).join(' ');
+      debugPrint('[$side] Invalid audio data packet: $dataStr');
       return;
     }
 
@@ -316,6 +317,8 @@ class BluetoothReciever {
             .trim());
         if (list != null) {
           bt.sync();
+        } else {
+          await bt.sendText('No checklist found for "$transcription"');
         }
       } else if (transcription.toLowerCase().contains("checklist")) {
         debugPrint('[$side] Checklist request detected');
@@ -326,7 +329,11 @@ class BluetoothReciever {
             .trim());
         if (list != null) {
           bt.sync();
+        } else {
+          await bt.sendText('No checklist found for "$transcription"');
         }
+      } else {
+        await bt.sendText('Unknown command: "$transcription"');
       }
     }
   }
