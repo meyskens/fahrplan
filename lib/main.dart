@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:fahrplan/models/fahrplan/calendar.dart';
+import 'package:fahrplan/models/fahrplan/checklist.dart';
 import 'package:fahrplan/models/fahrplan/daily.dart';
 import 'package:fahrplan/models/fahrplan/stop.dart';
 import 'package:fahrplan/services/bluetooth_manager.dart';
@@ -57,6 +58,8 @@ Future<void> _initHive() async {
   Hive.registerAdapter(FahrplanDailyItemAdapter());
   Hive.registerAdapter(FahrplanStopItemAdapter());
   Hive.registerAdapter(FahrplanCalendarAdapter());
+  Hive.registerAdapter(FahrplanCheckListItemAdapter());
+  Hive.registerAdapter(FahrplanChecklistAdapter());
   await Hive.initFlutter();
 }
 

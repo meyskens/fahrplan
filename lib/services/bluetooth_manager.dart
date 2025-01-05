@@ -512,6 +512,10 @@ class BluetoothManager {
     return null;
   }
 
+  Future<void> sync() async {
+    await _sync();
+  }
+
   Future<void> _sync() async {
     if (!isConnected) {
       return;
