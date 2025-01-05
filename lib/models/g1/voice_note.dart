@@ -73,8 +73,9 @@ class VoiceNoteNotification {
        7a a3 7a 67 
        de ef 2a 85
      */
-    if (data.length < 6) return;
-    if (data[0] != Commands.QUICK_NOTE) return;
+    if (data[0] != Commands.QUICK_NOTE) throw Exception('Invalid command');
+    if (data.length < 6) throw Exception('Invalid data length');
+    if (data[4] != 0x01) throw Exception('Invalid subcommand');
     int length = data[1] + (data[2] << 8);
 
     double numNotesLength = (length - 6) / 9;
