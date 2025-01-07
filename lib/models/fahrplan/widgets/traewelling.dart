@@ -18,6 +18,7 @@ const _allowedProducts = [
 class TraewellingWidget implements FahrplanWidget {
   String? username;
   String? token;
+  String? apiURL;
 
   @override
   int getPriority() {
@@ -28,19 +29,23 @@ class TraewellingWidget implements FahrplanWidget {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     username = prefs.getString('traewelling_username');
     token = prefs.getString('traewelling_token');
+    apiURL = prefs.getString('traewelling_apiURL') ??
+        'https://traewelling.de/api/v1';
   }
 
-  Future<void> saveCredentials(String username, String token) async {
+  Future<void> saveCredentials(
+      String username, String token, String apiURL) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('traewelling_username', username);
     await prefs.setString('traewelling_token', token);
+    await prefs.setString('traewelling_apiURL', apiURL);
 
     await loadCredentials();
   }
 
   Future<_TraewellingResponse> _getTrips() async {
     final response = await http.get(
-      Uri.parse('https://traewelling.de/api/v1/user/$username/statuses'),
+      Uri.parse('$apiURL/user/$username/statuses'),
       headers: <String, String>{
         'Authorization': 'Bearer $token',
       },
@@ -55,7 +60,7 @@ class TraewellingWidget implements FahrplanWidget {
 
   Future<_TraewellingStationResponse> _getStationTable(String id) async {
     final response = await http.get(
-      Uri.parse('https://traewelling.de/api/v1/station/$id/departures'),
+      Uri.parse('$apiURL/station/$id/departures'),
       headers: <String, String>{
         'Authorization': 'Bearer $token',
       },
