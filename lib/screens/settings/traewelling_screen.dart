@@ -11,6 +11,7 @@ class TraewellingSettingsPage extends StatefulWidget {
 class TraewellingSettingsPageState extends State<TraewellingSettingsPage> {
   final _usernameController = TextEditingController();
   final _tokenController = TextEditingController();
+  final _apiUrlController = TextEditingController();
   final TraewellingWidget _traewellingWidget = TraewellingWidget();
 
   @override
@@ -24,13 +25,15 @@ class TraewellingSettingsPageState extends State<TraewellingSettingsPage> {
     setState(() {
       _usernameController.text = _traewellingWidget.username ?? '';
       _tokenController.text = _traewellingWidget.token ?? '';
+      _apiUrlController.text = _traewellingWidget.apiURL ?? '';
     });
   }
 
   Future<void> _saveCredentials() async {
-    String username = _usernameController.text;
-    String token = _tokenController.text;
-    await _traewellingWidget.saveCredentials(username, token);
+    final username = _usernameController.text;
+    final token = _tokenController.text;
+    final apiURL = _apiUrlController.text;
+    await _traewellingWidget.saveCredentials(username, token, apiURL);
     if (mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Credentials saved')));
@@ -47,6 +50,10 @@ class TraewellingSettingsPageState extends State<TraewellingSettingsPage> {
         padding: const EdgeInsets.all(16.0),
         child: ListView(
           children: [
+            TextField(
+              controller: _apiUrlController,
+              decoration: InputDecoration(labelText: 'API URL'),
+            ),
             TextField(
               controller: _usernameController,
               decoration: InputDecoration(labelText: 'Username'),
