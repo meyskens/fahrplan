@@ -93,10 +93,6 @@ class WhisperLocalService implements WhisperService {
     // delete wav file
     await File(wavPath).delete();
 
-    // remove all [.*] tags
-    transcription.text = transcription.text.replaceAll(RegExp(r'\[.*?\]'), '');
-    // remove all double spaces
-    transcription.text = transcription.text.replaceAll(RegExp(r' {2,}'), ' ');
     return transcription.text;
   }
 }
@@ -186,10 +182,6 @@ class WhisperRemoteService implements WhisperService {
 
     var text = transcription.text;
 
-    // remove all [.*] tags
-    text = text.replaceAll(RegExp(r'\[.*?\]'), '');
-    // remove all double spaces
-    text = text.replaceAll(RegExp(r' {2,}'), ' ');
     return text;
   }
 }
