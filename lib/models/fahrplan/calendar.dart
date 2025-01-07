@@ -59,7 +59,8 @@ class FahrplanCalendarComposer {
   }
 
   bool _isToday(DateTime time) {
-    final now = DateTime.now();
+    time = time.toLocal();
+    final now = DateTime.now().toLocal();
     return time.year == now.year &&
         time.month == now.month &&
         time.day == now.day;
