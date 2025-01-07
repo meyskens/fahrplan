@@ -3,6 +3,7 @@ import 'package:fahrplan/models/fahrplan/widgets/homassistant.dart';
 import 'package:fahrplan/models/g1/glass.dart';
 import 'package:fahrplan/models/g1/commands.dart';
 import 'package:fahrplan/models/g1/voice_note.dart';
+import 'package:fahrplan/models/voice/voice_commands.dart';
 import 'package:fahrplan/services/bluetooth_manager.dart';
 import 'package:fahrplan/services/whisper.dart';
 import 'package:fahrplan/utils/lc3.dart';
@@ -17,6 +18,38 @@ class BluetoothReciever {
 
   final voiceCollectorAI = VoiceDataCollector();
   final voiceCollectorNote = VoiceDataCollector();
+
+  final rightVoiceCommands = VoiceCommandHelper(commands: [
+    VoiceCommand(
+        command: "open checklist",
+        phrases: [
+          "checklist",
+          "check list",
+          "open checklist",
+          "open check list"
+        ],
+        fn: (String listName) {
+          final list = FahrplanChecklist.displayChecklistFor(listName);
+          final bt = BluetoothManager();
+          if (list != null) {
+            bt.sync();
+          } else {
+            bt.sendText('No checklist found for "$listName"');
+          }
+        }),
+    VoiceCommand(
+        command: "close checklist",
+        phrases: ["close checklist", "close check list"],
+        fn: (String listName) {
+          final list = FahrplanChecklist.hideChecklistFor(listName);
+          final bt = BluetoothManager();
+          if (list != null) {
+            bt.sync();
+          } else {
+            bt.sendText('No checklist found for "$listName"');
+          }
+        })
+  ]);
 
   final WhisperService _whisperService = WhisperLocalService();
 
@@ -218,32 +251,10 @@ class BluetoothReciever {
       debugPrint('[$side] Transcription: $transcription');
       debugPrint(
           '[$side] Transcription took: ${endTime.difference(startTime).inSeconds} seconds');
-      if (transcription.toLowerCase().contains("close checklist")) {
-        debugPrint('[$side] Checklist close request detected');
-        final list = FahrplanChecklist.hideChecklistFor(transcription
-            .toLowerCase()
-            .replaceAll("close checklist", "")
-            .replaceAll(".", "")
-            .trim());
-        if (list != null) {
-          bt.sync();
-        } else {
-          await bt.sendText('No checklist found for "$transcription"');
-        }
-      } else if (transcription.toLowerCase().contains("checklist")) {
-        debugPrint('[$side] Checklist request detected');
-        final list = FahrplanChecklist.displayChecklistFor(transcription
-            .toLowerCase()
-            .replaceAll("checklist", "")
-            .replaceAll(".", "")
-            .trim());
-        if (list != null) {
-          bt.sync();
-        } else {
-          await bt.sendText('No checklist found for "$transcription"');
-        }
-      } else {
-        await bt.sendText('Unknown command: "$transcription"');
+      try {
+        rightVoiceCommands.parseCommand(transcription);
+      } catch (e) {
+        bt.sendText(e.toString());
       }
     }
   }
