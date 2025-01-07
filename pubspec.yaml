@@ -54,6 +54,7 @@ dependencies:
   whisper_flutter_new: ^1.0.1
   duration_picker: ^1.2.0
   fuzzywuzzy: ^1.2.0
+  dart_openai: ^5.1.0
 
 dev_dependencies:
   flutter_test:
