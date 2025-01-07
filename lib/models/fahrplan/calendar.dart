@@ -39,6 +39,9 @@ class FahrplanCalendarComposer {
           ));
 
       for (var event in events.data ?? []) {
+        if (event.start == null) {
+          continue;
+        }
         if (!_isToday(event.start!)) {
           continue;
         }
