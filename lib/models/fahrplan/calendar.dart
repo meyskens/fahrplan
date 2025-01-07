@@ -43,10 +43,11 @@ class FahrplanCalendarComposer {
           continue;
         }
 
+        final start = event.start!.toLocal();
         items.add(FahrplanItem(
           title: event.title,
-          hour: event.start!.hour,
-          minute: event.start!.minute,
+          hour: start.hour,
+          minute: start.minute,
         ));
       }
     }
