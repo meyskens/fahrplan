@@ -8,7 +8,6 @@ import 'package:fahrplan/services/bluetooth_manager.dart';
 import 'package:fahrplan/services/whisper.dart';
 import 'package:fahrplan/utils/lc3.dart';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 // Command response status codes
 const int RESPONSE_SUCCESS = 0xC9;
@@ -40,7 +39,12 @@ class BluetoothReciever {
         }),
     VoiceCommand(
         command: "close checklist",
-        phrases: ["close checklist", "close check list"],
+        phrases: [
+          "close checklist",
+          "close check list",
+          "closed checklist",
+          "closed check list"
+        ],
         fn: (String listName) {
           final list = FahrplanChecklist.hideChecklistFor(listName);
           final bt = BluetoothManager();
