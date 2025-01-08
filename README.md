@@ -13,7 +13,7 @@ While it is meant to offer an "OS" for the Even Realities G1 and will copy some 
 * [Träwelling](https://traewelling.de/) integration for real time train info
 * Daily: a daily "fahrplan" presented in G1 dashboard
 * Stops: important one off-timers presenting an immediate text message for an important timed action (eg. leave for train)
-* HomeAssistant: send commands by holding the left button (Even AI). Transcribed locally with Wisper
+* HomeAssistant: send commands by holding the left button (Even AI). Transcribed locally with Wisper (self hosted also possible)
 * Checklists: open and close lists on your dashboard by holding the right button (QuickNote) saying "checklist <name>" or "close checklist <name>"
 * Debug screen: with extra fun like bad apple! (unzip assets/badapple.zip first before compiling for this)
 

@@ -10,11 +10,45 @@ class WhisperSettingsPage extends StatefulWidget {
 
 class WhisperSettingsPageState extends State<WhisperSettingsPage> {
   final List<String> _models = FahrplanWhisperModel.models;
+  final List<String> _languages = [
+    'en',
+    'es',
+    'fr',
+    'de',
+    'it',
+    'pt',
+    'nl',
+    'ru',
+    'zh',
+    'ja',
+    'ko',
+    'ar',
+    'hi',
+    'bn',
+    'ur',
+    'ta',
+    'te',
+    'mr',
+    'gu',
+    'kn',
+    'ml',
+    'pa',
+    'th',
+    'vi',
+    'tl',
+    'tr',
+    'fa',
+    'he',
+    'sw'
+  ];
+
   String? _selectedModel;
   String? _selectedMode;
+  String? _selectedLanguage;
 
   final _apiUrlController = TextEditingController();
   final _apiKeyController = TextEditingController();
+  final _remoteModelController = TextEditingController();
 
   @override
   void initState() {
@@ -27,12 +61,22 @@ class WhisperSettingsPageState extends State<WhisperSettingsPage> {
     setState(() {
       _selectedModel = prefs.getString('whisper_model') ?? 'base';
       _selectedMode = prefs.getString('whisper_mode') ?? 'local';
+      _selectedLanguage = prefs.getString('whisper_language') ?? 'en';
+      _apiUrlController.text = prefs.getString('whisper_api_url') ?? '';
+      _apiKeyController.text = prefs.getString('whisper_api_key') ?? '';
+      _remoteModelController.text =
+          prefs.getString('whisper_remote_model') ?? '';
     });
   }
 
   Future<void> _saveSelectedModel(String model) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('whisper_model', model);
+  }
+
+  Future<void> _saveSelectedLanguage(String lang) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('whisper_language', lang);
   }
 
   Future<void> _saveSelectedMode(String mode) async {
@@ -73,11 +117,15 @@ class WhisperSettingsPageState extends State<WhisperSettingsPage> {
       if (_apiUrlController.text.isEmpty) {
         throw Exception("API URL is required");
       }
+      if (_remoteModelController.text.isEmpty) {
+        throw Exception("Model is required");
+      }
 
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('whisper_mode', _selectedMode!);
       await prefs.setString('whisper_api_url', _apiUrlController.text);
       await prefs.setString('whisper_api_key', _apiKeyController.text);
+      await prefs.setString('whisper_remote_moel', _remoteModelController.text);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Whisper configuration saved!')),
@@ -132,6 +180,11 @@ class WhisperSettingsPageState extends State<WhisperSettingsPage> {
         controller: _apiKeyController,
       ),
       SizedBox(height: 20),
+      TextField(
+        decoration: InputDecoration(labelText: 'Model'),
+        controller: _remoteModelController,
+      ),
+      SizedBox(height: 20),
       ElevatedButton(
         onPressed: _saveRemote,
         style: ElevatedButton.styleFrom(
@@ -150,19 +203,33 @@ class WhisperSettingsPageState extends State<WhisperSettingsPage> {
           Text('Select Mode:', style: TextStyle(fontSize: 18)),
           SizedBox(height: 10),
           DropdownButton(
-              value: _selectedMode,
-              onChanged: (String? newValue) => _saveSelectedMode(newValue!),
+            value: _selectedMode,
+            onChanged: (String? newValue) => _saveSelectedMode(newValue!),
+            isExpanded: true,
+            items: [
+              DropdownMenuItem(
+                value: "local",
+                child: Text("Local"),
+              ),
+              DropdownMenuItem(
+                value: "remote",
+                child: Text("Remote"),
+              )
+            ],
+          ),
+          SizedBox(height: 20),
+          Text('Select Language:', style: TextStyle(fontSize: 18)),
+          SizedBox(height: 10),
+          DropdownButton(
+              value: _selectedLanguage,
+              onChanged: (String? newValue) => _saveSelectedLanguage(newValue!),
               isExpanded: true,
-              items: [
-                DropdownMenuItem(
-                  value: "local",
-                  child: Text("Local"),
-                ),
-                DropdownMenuItem(
-                  value: "remote",
-                  child: Text("Remote"),
-                )
-              ]),
+              items: _languages.map<DropdownMenuItem<String>>((String lang) {
+                return DropdownMenuItem<String>(
+                  value: lang,
+                  child: Text(lang),
+                );
+              }).toList()),
           ...(_selectedMode == "local" ? localOpts : remoteOpts),
         ]),
       ),

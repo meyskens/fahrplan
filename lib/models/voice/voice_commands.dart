@@ -10,6 +10,7 @@ class VoiceCommandHelper {
       for (var trigger in cmd.phrases) {
         if (transcription.startsWith(trigger.toLowerCase())) {
           cmd.fn(_removeTrigger(transcription, trigger));
+          return;
         }
       }
     }
