@@ -8,6 +8,7 @@ import 'package:fahrplan/services/bluetooth_manager.dart';
 import 'package:fahrplan/services/whisper.dart';
 import 'package:fahrplan/utils/lc3.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Command response status codes
 const int RESPONSE_SUCCESS = 0xC9;
@@ -50,8 +51,6 @@ class BluetoothReciever {
           }
         })
   ]);
-
-  final WhisperService _whisperService = WhisperLocalService();
 
   int _syncId = 0;
 
@@ -141,7 +140,8 @@ class BluetoothReciever {
         debugPrint('[$side] Voice data decoded: ${pcm.length} bytes');
 
         final startTime = DateTime.now();
-        final transcription = await _whisperService.transcribe(pcm);
+        final transcription =
+            await (await WhisperService.service()).transcribe(pcm);
         final endTime = DateTime.now();
 
         debugPrint('[$side] Transcription: $transcription');
@@ -245,7 +245,8 @@ class BluetoothReciever {
           .sendData(VoiceNote(index: index + 1).buildDeleteCommand(_syncId++));
 
       final startTime = DateTime.now();
-      final transcription = await _whisperService.transcribe(pcm);
+      final transcription =
+          await (await WhisperService.service()).transcribe(pcm);
       final endTime = DateTime.now();
 
       debugPrint('[$side] Transcription: $transcription');
