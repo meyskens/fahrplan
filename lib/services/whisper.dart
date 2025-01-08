@@ -87,6 +87,7 @@ class WhisperLocalService implements WhisperService {
         diarize: false,
         isSpecialTokens: false,
         nProcessors: 2,
+        language: prefs.getString('whisper_language') ?? 'en',
       ),
     );
 
@@ -106,6 +107,16 @@ class WhisperRemoteService implements WhisperService {
   Future<String?> getApiKey() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getString('whisper_remote_api_key');
+  }
+
+  Future<String?> getModel() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('whisper_remote_model');
+  }
+
+  Future<String?> getLanguage() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('whisper_language');
   }
 
   void init() async {
@@ -173,8 +184,9 @@ class WhisperRemoteService implements WhisperService {
     OpenAIAudioModel transcription =
         await OpenAI.instance.audio.createTranscription(
       file: File(wavPath),
-      model: "whisper-1",
+      model: await getModel() ?? '',
       responseFormat: OpenAIAudioResponseFormat.json,
+      language: await getLanguage(),
     );
 
     // delete wav file
