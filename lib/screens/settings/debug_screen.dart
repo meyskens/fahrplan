@@ -4,6 +4,7 @@ import 'package:fahrplan/models/g1/dashboard.dart';
 import 'package:fahrplan/models/g1/note.dart';
 import 'package:fahrplan/models/g1/notification.dart';
 import 'package:fahrplan/models/g1/time_weather.dart';
+import 'package:fahrplan/models/g1/translate.dart';
 import 'package:fahrplan/services/bluetooth_manager.dart';
 import 'package:fahrplan/utils/bitmap.dart';
 import 'package:flutter/material.dart';
@@ -161,6 +162,55 @@ class _DebugPageSate extends State<DebugPage> {
     }
   }
 
+  void _debugTranslateCommand() async {
+    if (bluetoothManager.isConnected) {
+      final tr = Translate(
+          fromLanguage: TranslateLanguages.FRENCH,
+          toLanguage: TranslateLanguages.ENGLISH);
+      await bluetoothManager.sendCommandToGlasses(tr.buildSetupCommand());
+      await bluetoothManager.rightGlass!
+          .sendData(tr.buildRightGlassStartCommand());
+      for (var cmd in tr.buildInitalScreenLoad()) {
+        await bluetoothManager.sendCommandToGlasses(cmd);
+      }
+      await Future.delayed(const Duration(milliseconds: 200));
+      await bluetoothManager.setMicrophone(true);
+
+      final demoText = [
+        "Hello and welcome to Fahrplan",
+        "These glasses cured my autism!",
+        "haha no just kidding but they are amazing",
+        "you are watching a demo of translation",
+        "but nobody is talking??",
+        "that is why I said DEMO...",
+        "anyway enjoy Fahrplan",
+        "and don't forget to like and subscribe"
+      ];
+      final demoTextFrench = [
+        "Bonjour et bienvenue à Fahrplan",
+        "Ces lunettes ont guéri mon autisme!",
+        "haha non je rigole mais elles sont incroyables",
+        "vous regardez une démo de traduction",
+        "mais personne ne parle??",
+        "c'est pourquoi j'ai dit DEMO...",
+        "de toute façon, profitez de Fahrplan",
+        "et n'oubliez pas de liker et de vous abonner"
+      ];
+      for (var i = 0; i < demoText.length; i++) {
+        await bluetoothManager
+            .sendCommandToGlasses(tr.buildTranslatedCommand(demoText[i]));
+        await bluetoothManager
+            .sendCommandToGlasses(tr.buildOriginalCommand(demoTextFrench[i]));
+        await Future.delayed(const Duration(seconds: 4));
+      }
+      await bluetoothManager.setMicrophone(false);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -220,6 +270,11 @@ class _DebugPageSate extends State<DebugPage> {
           ElevatedButton(
             onPressed: _debugTimeCommand,
             child: const Text("Debug Time/Weather Command"),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: _debugTranslateCommand,
+            child: const Text("Debug Translate"),
           ),
         ],
       ),
