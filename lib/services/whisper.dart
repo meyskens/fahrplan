@@ -10,6 +10,16 @@ import 'package:uuid/uuid.dart';
 import 'package:whisper_flutter_new/whisper_flutter_new.dart';
 
 abstract class WhisperService {
+  static Future<WhisperService> service() async {
+    final prefs = await SharedPreferences.getInstance();
+    final mode = prefs.getString('whisper_mode') ?? 'local';
+    if (mode == "remote") {
+      return WhisperRemoteService();
+    }
+
+    return WhisperLocalService();
+  }
+
   Future<String> transcribe(Uint8List voiceData);
 }
 
@@ -99,37 +109,38 @@ class WhisperLocalService implements WhisperService {
 }
 
 class WhisperRemoteService implements WhisperService {
+  late SharedPreferences _prefs;
   Future<String?> getBaseURL() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getString('whisper_remote_url');
+    return _prefs.getString('whisper_api_url');
   }
 
   Future<String?> getApiKey() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getString('whisper_remote_api_key');
+    return _prefs.getString('whisper_api_key');
   }
 
   Future<String?> getModel() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getString('whisper_remote_model');
+    return _prefs.getString('whisper_remote_model');
   }
 
   Future<String?> getLanguage() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getString('whisper_language');
+    return _prefs.getString('whisper_language');
   }
 
-  void init() async {
+  Future<void> init() async {
+    _prefs = await SharedPreferences.getInstance();
     final url = await getBaseURL();
     if (url == null) {
       throw Exception("no Whisper Remote URL set");
     }
+    debugPrint('Initializing Whisper Remote Service with URL: $url');
     OpenAI.baseUrl = url;
     OpenAI.apiKey = await getApiKey() ?? '';
   }
 
   @override
   Future<String> transcribe(Uint8List voiceData) async {
+    debugPrint('Transcribing voice data');
+    await init();
     final Directory documentDirectory =
         await getApplicationDocumentsDirectory();
     // Prepare wav file
@@ -179,11 +190,12 @@ class WhisperRemoteService implements WhisperService {
     ];
     header.addAll(voiceData.toList());
 
-    await File(wavPath).writeAsBytes(Uint8List.fromList(header));
+    final audioFile = File(wavPath);
+    await audioFile.writeAsBytes(Uint8List.fromList(header));
 
     OpenAIAudioModel transcription =
         await OpenAI.instance.audio.createTranscription(
-      file: File(wavPath),
+      file: audioFile,
       model: await getModel() ?? '',
       responseFormat: OpenAIAudioResponseFormat.json,
       language: await getLanguage(),

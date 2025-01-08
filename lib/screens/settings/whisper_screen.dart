@@ -125,7 +125,8 @@ class WhisperSettingsPageState extends State<WhisperSettingsPage> {
       await prefs.setString('whisper_mode', _selectedMode!);
       await prefs.setString('whisper_api_url', _apiUrlController.text);
       await prefs.setString('whisper_api_key', _apiKeyController.text);
-      await prefs.setString('whisper_remote_moel', _remoteModelController.text);
+      await prefs.setString(
+          'whisper_remote_model', _remoteModelController.text);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Whisper configuration saved!')),
