@@ -6,6 +6,7 @@ import 'package:fahrplan/models/g1/bmp.dart';
 import 'package:fahrplan/models/g1/commands.dart';
 import 'package:fahrplan/models/g1/crc.dart';
 import 'package:fahrplan/models/g1/dashboard.dart';
+import 'package:fahrplan/models/g1/setup.dart';
 import 'package:fahrplan/services/dashboard_controller.dart';
 import 'package:fahrplan/models/g1/note.dart';
 import 'package:fahrplan/models/g1/notification.dart';
@@ -542,6 +543,14 @@ class BluetoothManager {
     final dash = await dashboardController.updateDashboardCommand();
     for (var command in dash) {
       await sendCommandToGlasses(command);
+    }
+
+    // every 10 minutes sync G1Setup
+    if (DateTime.now().minute % 10 == 0) {
+      final setup = await G1Setup.generateSetup().constructSetup();
+      for (var command in setup) {
+        await sendCommandToGlasses(command);
+      }
     }
   }
 

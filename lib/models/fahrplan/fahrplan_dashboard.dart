@@ -51,6 +51,7 @@ class FahrplanDashboard {
     await Hive.openBox<FahrplanDailyItem>('fahrplanDailyBox');
     await Hive.openBox<FahrplanCalendar>('fahrplanCalendarBox');
     await Hive.openBox<FahrplanChecklist>('fahrplanChecklistBox');
+    await Hive.openBox('fahrplanNotificationApps');
     try {
       await Hive.openLazyBox<FahrplanStopItem>('fahrplanStopBox');
     } catch (e) {

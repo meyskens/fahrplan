@@ -1,9 +1,11 @@
 import 'package:fahrplan/screens/settings/dashboard_screen.dart';
 import 'package:fahrplan/screens/settings/debug_screen.dart';
 import 'package:fahrplan/screens/settings/homeassistant_screen.dart';
+import 'package:fahrplan/screens/settings/notifications_screen.dart';
 import 'package:fahrplan/screens/settings/traewelling_screen.dart';
 import 'package:fahrplan/screens/settings/ui_settings.dart';
 import 'package:fahrplan/screens/settings/whisper_screen.dart';
+import 'package:fahrplan/widgets/about_dialog.dart';
 import 'package:flutter/material.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -103,6 +105,23 @@ class SettingsPage extends StatelessWidget {
           ListTile(
             title: Row(
               children: [
+                Icon(Icons.notifications),
+                SizedBox(width: 10),
+                Text('App Notifications'),
+              ],
+            ),
+            trailing: Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => NotificationSettingsPage()),
+              );
+            },
+          ),
+          ListTile(
+            title: Row(
+              children: [
                 Icon(Icons.bug_report),
                 SizedBox(width: 10),
                 Text('Debug'),
@@ -115,6 +134,17 @@ class SettingsPage extends StatelessWidget {
                 MaterialPageRoute(builder: (context) => DebugPage()),
               );
             },
+          ),
+          ListTile(
+            title: Row(
+              children: [
+                Icon(Icons.info),
+                SizedBox(width: 10),
+                Text('About'),
+              ],
+            ),
+            trailing: Icon(Icons.chevron_right),
+            onTap: () => showCustomAboutDialog(context),
           ),
         ],
       ),
