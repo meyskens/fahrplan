@@ -55,6 +55,7 @@ dependencies:
   duration_picker: ^1.2.0
   fuzzywuzzy: ^1.2.0
   dart_openai: ^5.1.0
+  package_info: ^2.0.2
 
 dev_dependencies:
   flutter_test:

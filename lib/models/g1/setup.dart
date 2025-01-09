@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:fahrplan/models/g1/commands.dart';
+import 'package:hive/hive.dart';
 
 class G1Setup {
   bool calendarEnable;
@@ -9,6 +10,26 @@ class G1Setup {
   bool msgEnable;
   bool iosMailEnable;
   App app;
+
+  static G1Setup generateSetup() {
+    final appBox = Hive.box('fahrplanNotificationApps');
+    final selectedMap = appBox.toMap();
+    selectedMap.removeWhere((k, v) => !v);
+    final selected = selectedMap.keys.toList();
+
+    final appList = <AppItem>[];
+    for (var app in selected) {
+      appList.add(AppItem(id: app, name: app));
+    }
+
+    return G1Setup(
+      calendarEnable: true,
+      callEnable: true,
+      msgEnable: true,
+      iosMailEnable: true,
+      app: App(list: appList, enable: true),
+    );
+  }
 
   G1Setup(
       {required this.calendarEnable,
