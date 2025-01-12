@@ -64,18 +64,17 @@ class HAResponse {
   HAResponse({this.response, this.conversationId});
 
   HAResponse.fromJson(Map<String, dynamic> json) {
-    response = json['response'] != null
-        ? new Response.fromJson(json['response'])
-        : null;
+    response =
+        json['response'] != null ? Response.fromJson(json['response']) : null;
     conversationId = json['conversation_id'];
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    if (this.response != null) {
-      data['response'] = this.response!.toJson();
+    final Map<String, dynamic> data = <String, dynamic>{};
+    if (response != null) {
+      data['response'] = response!.toJson();
     }
-    data['conversation_id'] = this.conversationId;
+    data['conversation_id'] = conversationId;
     return data;
   }
 }
@@ -91,20 +90,19 @@ class Response {
   Response.fromJson(Map<String, dynamic> json) {
     responseType = json['response_type'];
     language = json['language'];
-    data = json['data'] != null ? new Data.fromJson(json['data']) : null;
-    speech =
-        json['speech'] != null ? new Speech.fromJson(json['speech']) : null;
+    data = json['data'] != null ? Data.fromJson(json['data']) : null;
+    speech = json['speech'] != null ? Speech.fromJson(json['speech']) : null;
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['response_type'] = this.responseType;
-    data['language'] = this.language;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['response_type'] = responseType;
+    data['language'] = language;
     if (this.data != null) {
       data['data'] = this.data!.toJson();
     }
-    if (this.speech != null) {
-      data['speech'] = this.speech!.toJson();
+    if (speech != null) {
+      data['speech'] = speech!.toJson();
     }
     return data;
   }
@@ -119,15 +117,15 @@ class Data {
     if (json['targets'] != null) {
       targets = <Targets>[];
       json['targets'].forEach((v) {
-        targets!.add(new Targets.fromJson(v));
+        targets!.add(Targets.fromJson(v));
       });
     }
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    if (this.targets != null) {
-      data['targets'] = this.targets!.map((v) => v.toJson()).toList();
+    final Map<String, dynamic> data = <String, dynamic>{};
+    if (targets != null) {
+      data['targets'] = targets!.map((v) => v.toJson()).toList();
     }
     return data;
   }
@@ -147,10 +145,10 @@ class Targets {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['type'] = this.type;
-    data['name'] = this.name;
-    data['id'] = this.id;
+    final Map<String, dynamic> data = Map<String, dynamic>();
+    data['type'] = type;
+    data['name'] = name;
+    data['id'] = id;
     return data;
   }
 }
@@ -161,13 +159,13 @@ class Speech {
   Speech({this.plain});
 
   Speech.fromJson(Map<String, dynamic> json) {
-    plain = json['plain'] != null ? new Plain.fromJson(json['plain']) : null;
+    plain = json['plain'] != null ? Plain.fromJson(json['plain']) : null;
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    if (this.plain != null) {
-      data['plain'] = this.plain!.toJson();
+    final Map<String, dynamic> data = <String, dynamic>{};
+    if (plain != null) {
+      data['plain'] = plain!.toJson();
     }
     return data;
   }
@@ -183,8 +181,8 @@ class Plain {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['speech'] = this.speech;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['speech'] = speech;
     return data;
   }
 }

@@ -6,10 +6,8 @@ PRs to help document these magic numbers are very welcome!!
 */
 
 import 'dart:convert';
-import 'dart:ffi';
 import 'dart:typed_data';
 
-import 'package:fahrplan/utils/utils.dart';
 import 'package:flutter/foundation.dart';
 
 class TranslateLanguages {

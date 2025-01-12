@@ -256,7 +256,7 @@ class BluetoothManager {
 
   void _setReconnect(Glass glass) {
     glass.device.connectionState.listen((BluetoothConnectionState state) {
-      debugPrint('[${glass!.side} Glass] Connection state: $state');
+      debugPrint('[${glass.side} Glass] Connection state: $state');
       if (state == BluetoothConnectionState.disconnected) {
         debugPrint(
             '[${glass.side} Glass] Disconnected, attempting to reconnect...');
