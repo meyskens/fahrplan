@@ -133,7 +133,7 @@ class TraewellingWidget implements FahrplanWidget {
     for (final item in filteredData) {
       DateTime plannedWhen = DateTime.parse(item.plannedWhen ?? '').toLocal();
       double delayMin = (item.delay ?? 0) / 60;
-      String delay = delayMin > 5 ? ' (+${delayMin.round()})' : '';
+      String delay = delayMin > 2 ? ' (+${delayMin.round()})' : '';
       String platform = item.plannedPlatform ?? item.platform ?? '';
       if (platform.isNotEmpty) {
         platform = 'pl. $platform';
@@ -664,7 +664,7 @@ class TraewellingStationResponseData {
 
 class Stop {
   String? type;
-  String? id;
+  int? id;
   String? name;
   Location? location;
   Products? products;
@@ -698,25 +698,27 @@ class Stop {
 
 class Location {
   String? type;
-  String? id;
-  double? latitude;
-  double? longitude;
+  // disabled because PHP and sending data types...
 
-  Location({this.type, this.id, this.latitude, this.longitude});
+  //int? id;
+  //double? latitude;
+  //double? longitude;
+
+  Location({this.type});
 
   Location.fromJson(Map<String, dynamic> json) {
     type = json['type'];
-    id = json['id'];
-    latitude = json['latitude'];
-    longitude = json['longitude'];
+    //id = json['id'];
+    //latitude = json['latitude'];
+    //longitude = json['longitude'];
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['type'] = type;
-    data['id'] = id;
-    data['latitude'] = latitude;
-    data['longitude'] = longitude;
+    // data['id'] = id;
+    //data['latitude'] = latitude;
+    //data['longitude'] = longitude;
     return data;
   }
 }
@@ -810,6 +812,10 @@ class Line {
     product = json['product'];
     operator =
         json['operator'] != null ? Operator.fromJson(json['operator']) : null;
+
+    if (name == null || name!.isEmpty) {
+      name = fahrtNr; // UK fix
+    }
   }
 
   Map<String, dynamic> toJson() {
