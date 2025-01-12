@@ -281,7 +281,7 @@ class TraewellingWidget implements FahrplanWidget {
 
 class _TraewellingResponse {
   List<Data>? data;
-  _TraewellingResponse({this.data});
+  _TraewellingResponse();
 
   _TraewellingResponse.fromJson(Map<String, dynamic> json) {
     if (json['data'] != null) {
@@ -408,7 +408,7 @@ class Train {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = Map<String, dynamic>();
+    final Map<String, dynamic> data = <String, dynamic>{};
     data['trip'] = trip;
     data['hafasId'] = hafasId;
     data['category'] = category;
@@ -575,19 +575,19 @@ class UserDetails {
 class _TraewellingStationResponse {
   List<TraewellingStationResponseData>? data;
 
-  _TraewellingStationResponse({this.data});
+  _TraewellingStationResponse();
 
   _TraewellingStationResponse.fromJson(Map<String, dynamic> json) {
     if (json['data'] != null) {
       data = <TraewellingStationResponseData>[];
       json['data'].forEach((v) {
-        data!.add(new TraewellingStationResponseData.fromJson(v));
+        data!.add(TraewellingStationResponseData.fromJson(v));
       });
     }
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
+    final Map<String, dynamic> data = <String, dynamic>{};
     if (this.data != null) {
       data['data'] = this.data!.map((v) => v.toJson()).toList();
     }
@@ -623,41 +623,40 @@ class TraewellingStationResponseData {
 
   TraewellingStationResponseData.fromJson(Map<String, dynamic> json) {
     tripId = json['tripId'];
-    stop = json['stop'] != null ? new Stop.fromJson(json['stop']) : null;
+    stop = json['stop'] != null ? Stop.fromJson(json['stop']) : null;
     when = json['when'];
     plannedWhen = json['plannedWhen'];
     delay = json['delay'];
     platform = json['platform'];
     plannedPlatform = json['plannedPlatform'];
     prognosisType = json['prognosisType'];
-    line = json['line'] != null ? new Line.fromJson(json['line']) : null;
-    destination = json['destination'] != null
-        ? new Stop.fromJson(json['destination'])
-        : null;
+    line = json['line'] != null ? Line.fromJson(json['line']) : null;
+    destination =
+        json['destination'] != null ? Stop.fromJson(json['destination']) : null;
     station =
-        json['station'] != null ? new Station.fromJson(json['station']) : null;
+        json['station'] != null ? Station.fromJson(json['station']) : null;
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['tripId'] = this.tripId;
-    if (this.stop != null) {
-      data['stop'] = this.stop!.toJson();
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['tripId'] = tripId;
+    if (stop != null) {
+      data['stop'] = stop!.toJson();
     }
-    data['when'] = this.when;
-    data['plannedWhen'] = this.plannedWhen;
-    data['delay'] = this.delay;
-    data['platform'] = this.platform;
-    data['plannedPlatform'] = this.plannedPlatform;
-    data['prognosisType'] = this.prognosisType;
-    if (this.line != null) {
-      data['line'] = this.line!.toJson();
+    data['when'] = when;
+    data['plannedWhen'] = plannedWhen;
+    data['delay'] = delay;
+    data['platform'] = platform;
+    data['plannedPlatform'] = plannedPlatform;
+    data['prognosisType'] = prognosisType;
+    if (line != null) {
+      data['line'] = line!.toJson();
     }
-    if (this.destination != null) {
-      data['destination'] = this.destination!.toJson();
+    if (destination != null) {
+      data['destination'] = destination!.toJson();
     }
-    if (this.station != null) {
-      data['station'] = this.station!.toJson();
+    if (station != null) {
+      data['station'] = station!.toJson();
     }
     return data;
   }
@@ -676,24 +675,22 @@ class Stop {
     type = json['type'];
     id = json['id'];
     name = json['name'];
-    location = json['location'] != null
-        ? new Location.fromJson(json['location'])
-        : null;
-    products = json['products'] != null
-        ? new Products.fromJson(json['products'])
-        : null;
+    location =
+        json['location'] != null ? Location.fromJson(json['location']) : null;
+    products =
+        json['products'] != null ? Products.fromJson(json['products']) : null;
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['type'] = this.type;
-    data['id'] = this.id;
-    data['name'] = this.name;
-    if (this.location != null) {
-      data['location'] = this.location!.toJson();
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['type'] = type;
+    data['id'] = id;
+    data['name'] = name;
+    if (location != null) {
+      data['location'] = location!.toJson();
     }
-    if (this.products != null) {
-      data['products'] = this.products!.toJson();
+    if (products != null) {
+      data['products'] = products!.toJson();
     }
     return data;
   }
@@ -715,11 +712,11 @@ class Location {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['type'] = this.type;
-    data['id'] = this.id;
-    data['latitude'] = this.latitude;
-    data['longitude'] = this.longitude;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['type'] = type;
+    data['id'] = id;
+    data['latitude'] = latitude;
+    data['longitude'] = longitude;
     return data;
   }
 }
@@ -762,17 +759,17 @@ class Products {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['nationalExpress'] = this.nationalExpress;
-    data['national'] = this.national;
-    data['regionalExp'] = this.regionalExp;
-    data['regional'] = this.regional;
-    data['suburban'] = this.suburban;
-    data['bus'] = this.bus;
-    data['ferry'] = this.ferry;
-    data['subway'] = this.subway;
-    data['tram'] = this.tram;
-    data['taxi'] = this.taxi;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['nationalExpress'] = nationalExpress;
+    data['national'] = national;
+    data['regionalExp'] = regionalExp;
+    data['regional'] = regional;
+    data['suburban'] = suburban;
+    data['bus'] = bus;
+    data['ferry'] = ferry;
+    data['subway'] = subway;
+    data['tram'] = tram;
+    data['taxi'] = taxi;
     return data;
   }
 }
@@ -811,24 +808,23 @@ class Line {
     productName = json['productName'];
     mode = json['mode'];
     product = json['product'];
-    operator = json['operator'] != null
-        ? new Operator.fromJson(json['operator'])
-        : null;
+    operator =
+        json['operator'] != null ? Operator.fromJson(json['operator']) : null;
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['type'] = this.type;
-    data['id'] = this.id;
-    data['fahrtNr'] = this.fahrtNr;
-    data['name'] = this.name;
-    data['public'] = this.public;
-    data['adminCode'] = this.adminCode;
-    data['productName'] = this.productName;
-    data['mode'] = this.mode;
-    data['product'] = this.product;
-    if (this.operator != null) {
-      data['operator'] = this.operator!.toJson();
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['type'] = type;
+    data['id'] = id;
+    data['fahrtNr'] = fahrtNr;
+    data['name'] = name;
+    data['public'] = public;
+    data['adminCode'] = adminCode;
+    data['productName'] = productName;
+    data['mode'] = mode;
+    data['product'] = product;
+    if (operator != null) {
+      data['operator'] = operator!.toJson();
     }
     return data;
   }
@@ -852,10 +848,10 @@ class Station {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['id'] = this.id;
-    data['name'] = this.name;
-    data['localized_name'] = this.localizedName;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['id'] = id;
+    data['name'] = name;
+    data['localized_name'] = localizedName;
     return data;
   }
 }
@@ -874,10 +870,10 @@ class Times {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['now'] = this.now;
-    data['prev'] = this.prev;
-    data['next'] = this.next;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['now'] = now;
+    data['prev'] = prev;
+    data['next'] = next;
     return data;
   }
 }

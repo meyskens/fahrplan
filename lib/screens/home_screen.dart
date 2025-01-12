@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:fahrplan/screens/calendars_screen.dart';
 import 'package:fahrplan/screens/checklist_screen.dart';
 import 'package:fahrplan/screens/fahrplan_daily.dart';

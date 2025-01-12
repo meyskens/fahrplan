@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:whisper_flutter_new/whisper_flutter_new.dart';
 
 class WhisperSettingsPage extends StatefulWidget {
+  const WhisperSettingsPage({super.key});
+
   @override
   WhisperSettingsPageState createState() => WhisperSettingsPageState();
 }
