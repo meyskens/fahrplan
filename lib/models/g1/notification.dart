@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:fahrplan/utils/emoji.dart';
 import 'package:intl/intl.dart';
 
 class G1Notification {
@@ -24,6 +25,9 @@ class G1Notification {
   }
 
   Future<List<Uint8List>> constructNotification() async {
+    ncsNotification.message = Emoji.emojiToAscii(ncsNotification.message);
+    ncsNotification.title = Emoji.emojiToAscii(ncsNotification.title);
+    ncsNotification.subtitle = Emoji.emojiToAscii(ncsNotification.subtitle);
     Uint8List jsonBytes = toBytes();
 
     int maxChunkSize = 180 - 4; // Subtract 4 bytes for header
@@ -53,9 +57,9 @@ class NCSNotification {
   final int action;
   final int type;
   final String appIdentifier;
-  final String title;
-  final String subtitle;
-  final String message;
+  String title;
+  String subtitle;
+  String message;
   final int timeS;
   final String date;
   final String displayName;
