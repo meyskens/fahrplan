@@ -8,6 +8,7 @@ import 'package:fahrplan/services/bluetooth_manager.dart';
 import 'package:fahrplan/services/whisper.dart';
 import 'package:fahrplan/utils/lc3.dart';
 import 'package:flutter/foundation.dart';
+import 'package:mutex/mutex.dart';
 
 // Command response status codes
 const int RESPONSE_SUCCESS = 0xC9;
@@ -269,14 +270,17 @@ class BluetoothReciever {
 class VoiceDataCollector {
   final Map<int, List<int>> _chunks = {};
   int seqAdd = 0;
+  final m = Mutex();
 
   bool isRecording = false;
 
-  void addChunk(int seq, List<int> data) {
+  Future<void> addChunk(int seq, List<int> data) async {
+    await m.acquire();
     if (seq == 255) {
       seqAdd += 255;
     }
     _chunks[seqAdd + seq] = data;
+    m.release();
   }
 
   List<int> getAllData() {
@@ -287,6 +291,15 @@ class VoiceDataCollector {
       complete.addAll(_chunks[key]!);
     }
     return complete;
+  }
+
+  Future<List<int>> getAllDataAndReset() async {
+    await m.acquire();
+    final data = getAllData();
+    reset();
+    m.release();
+
+    return data;
   }
 
   void reset() {
