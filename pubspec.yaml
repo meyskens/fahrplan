@@ -56,6 +56,8 @@ dependencies:
   fuzzywuzzy: ^1.2.0
   dart_openai: ^5.1.0
   package_info: ^2.0.2
+  web_socket_client: ^0.1.5
+  mutex: ^3.1.0
 
 dev_dependencies:
   flutter_test:
