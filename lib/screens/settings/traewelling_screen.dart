@@ -14,6 +14,8 @@ class TraewellingSettingsPageState extends State<TraewellingSettingsPage> {
   final _apiUrlController = TextEditingController();
   final TraewellingWidget _traewellingWidget = TraewellingWidget();
 
+  bool trainConductorMode = false;
+
   @override
   void initState() {
     super.initState();
@@ -26,6 +28,7 @@ class TraewellingSettingsPageState extends State<TraewellingSettingsPage> {
       _usernameController.text = _traewellingWidget.username ?? '';
       _tokenController.text = _traewellingWidget.token ?? '';
       _apiUrlController.text = _traewellingWidget.apiURL ?? '';
+      trainConductorMode = _traewellingWidget.trainConductorMode;
     });
   }
 
@@ -33,7 +36,8 @@ class TraewellingSettingsPageState extends State<TraewellingSettingsPage> {
     final username = _usernameController.text;
     final token = _tokenController.text;
     final apiURL = _apiUrlController.text;
-    await _traewellingWidget.saveCredentials(username, token, apiURL);
+    await _traewellingWidget.saveCredentials(
+        username, token, apiURL, trainConductorMode);
     if (mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Credentials saved')));
@@ -61,6 +65,15 @@ class TraewellingSettingsPageState extends State<TraewellingSettingsPage> {
             TextField(
               controller: _tokenController,
               decoration: InputDecoration(labelText: 'Token'),
+            ),
+            SwitchListTile(
+              title: Text('I am a train conductor'),
+              value: trainConductorMode,
+              onChanged: (bool value) {
+                setState(() {
+                  trainConductorMode = value;
+                });
+              },
             ),
             SizedBox(height: 20),
             ElevatedButton(

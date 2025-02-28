@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:fahrplan/models/fahrplan/widgets/fahrplan_widget.dart';
+import 'package:fahrplan/utils/station_codes.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -19,6 +20,10 @@ class TraewellingWidget implements FahrplanWidget {
   String? username;
   String? token;
   String? apiURL;
+  bool trainConductorMode = false;
+
+  final ns = NSStations.singleton;
+  final sncb = SNCBStations.singleton;
 
   @override
   int getPriority() {
@@ -31,14 +36,17 @@ class TraewellingWidget implements FahrplanWidget {
     token = prefs.getString('traewelling_token');
     apiURL = prefs.getString('traewelling_apiURL') ??
         'https://traewelling.de/api/v1';
+    trainConductorMode =
+        prefs.getBool('traewelling_trainConductorMode') ?? false;
   }
 
   Future<void> saveCredentials(
-      String username, String token, String apiURL) async {
+      String username, String token, String apiURL, bool tcMode) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('traewelling_username', username);
     await prefs.setString('traewelling_token', token);
     await prefs.setString('traewelling_apiURL', apiURL);
+    await prefs.setBool('traewelling_trainConductorMode', tcMode);
 
     await loadCredentials();
   }
@@ -70,6 +78,26 @@ class TraewellingWidget implements FahrplanWidget {
       return _TraewellingStationResponse.fromJson(jsonDecode(response.body));
     } else {
       throw Exception('Failed to load trips');
+    }
+  }
+
+  Future<TraewellingTripDeails> _getTripDetails(
+      String hafasTripId, String lineName, String start) async {
+    final response = await http.get(
+      Uri.parse(
+          '$apiURL/trains/trip?hafasTripId=${Uri.encodeQueryComponent(hafasTripId)}&lineName=${Uri.encodeQueryComponent(lineName)}&start=${Uri.encodeQueryComponent(start)}'),
+      headers: <String, String>{
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return TraewellingTripDeails.fromJson(jsonDecode(response.body));
+    } else {
+      debugPrint('Failed to load trip details');
+      debugPrint(response.body);
+      debugPrint(response.request!.url.toString());
+      throw Exception('Failed to load trip details');
     }
   }
 
@@ -154,6 +182,98 @@ class TraewellingWidget implements FahrplanWidget {
           name: filteredData.first.stop?.name ?? 'Departures',
           text: text)
     ];
+  }
+
+  Future<List<Note>> _generateConductorMode(
+      TraewellingTripDeails details) async {
+    if (details.data == null ||
+        details.data!.stopovers == null ||
+        details.data!.stopovers!.isEmpty) {
+      return [];
+    }
+
+    final stops = List<String>.empty(growable: true);
+
+    for (final stopover in details.data!.stopovers!) {
+      final plannedArrival = DateTime.parse(stopover.arrivalPlanned ?? '');
+      final realArrival = stopover.arrivalReal == null
+          ? null
+          : DateTime.parse(stopover.arrivalReal!);
+
+      final plannedDeparture = DateTime.parse(stopover.departurePlanned ?? '');
+      final realDeparture = stopover.departureReal == null
+          ? null
+          : DateTime.parse(stopover.departureReal!);
+
+      final departureTime = realDeparture ?? plannedDeparture;
+      if (departureTime.isBefore(DateTime.now())) {
+        continue;
+      }
+
+      var name = stopover.name ?? '';
+      final evaIdentifier = stopover.evaIdentifier?.toString() ?? '';
+      if (stopover.rilIdentifier != null &&
+          stopover.rilIdentifier!.isNotEmpty &&
+          evaIdentifier.startsWith("80")) {
+        name = stopover.rilIdentifier!;
+      }
+
+      if (evaIdentifier.startsWith("84")) {
+        debugPrint('Loading NS station codes');
+        await ns.load();
+        name = ns.getStationCodeForUIC(evaIdentifier) ?? name;
+      }
+      if (evaIdentifier.startsWith("88")) {
+        await sncb.load();
+        name = sncb.getStationCodeForName(name) ?? name;
+      }
+
+      var arrival = DateFormat('HH:mm').format(plannedArrival.toLocal());
+      if (realArrival != null) {
+        arrival +=
+            ' (+${realArrival.difference(plannedArrival).inMinutes} ${DateFormat('HH:mm').format(realArrival.toLocal())})';
+      }
+
+      var departure = DateFormat('HH:mm').format(plannedDeparture.toLocal());
+      if (realDeparture != null) {
+        departure +=
+            ' (+${realDeparture.difference(plannedDeparture).inMinutes} ${DateFormat('HH:mm').format(realDeparture.toLocal())})';
+      }
+
+      var canceled = '';
+      if (stopover.cancelled ?? false) {
+        canceled = ' (CANCELED)';
+      }
+
+      var stopLine =
+          "${NoteSupportedIcons.CHECKBOX} $arrival-$departure $name $canceled";
+
+      stops.add(stopLine);
+    }
+
+    final notes = List<Note>.empty(growable: true);
+    // devide into lists of 4
+    final List<List<String>> chunks = [];
+    int chunkIndex = 0;
+    for (var i = 0; i < stops.length; i++) {
+      if (i % 4 == 0) {
+        chunks.add([]);
+        chunkIndex++;
+      }
+      chunks[chunkIndex - 1].add(stops[i]);
+    }
+
+    // generate notes for the first 4 chunks
+    for (var i = 0; i < chunks.length && i < 4; i++) {
+      final chunk = chunks[i];
+      final note = Note(
+        noteNumber: i + 1,
+        name: details.data!.lineName ?? 'Conductor Mode',
+        text: chunk.map((e) => e.toString()).join('\n'),
+      );
+      notes.add(note);
+    }
+    return notes;
   }
 
   @override
@@ -263,6 +383,12 @@ class TraewellingWidget implements FahrplanWidget {
     if (remainingMinutes < 5) {
       notes.addAll(
           await _generateDeparture(train.destination!.id.toString(), train));
+    }
+
+    if (trainConductorMode) {
+      final tripDetails = await _getTripDetails(
+          train.hafasId!, train.lineName!, train.origin!.id.toString());
+      notes.addAll(await _generateConductorMode(tripDetails));
     }
 
     notes.add(Note(
@@ -880,6 +1006,170 @@ class Times {
     data['now'] = now;
     data['prev'] = prev;
     data['next'] = next;
+    return data;
+  }
+}
+
+class TraewellingTripDeails {
+  TraewellingTripDeailsData? data;
+
+  TraewellingTripDeails({this.data});
+
+  TraewellingTripDeails.fromJson(Map<String, dynamic> json) {
+    data = json['data'] != null
+        ? new TraewellingTripDeailsData.fromJson(json['data'])
+        : null;
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    if (this.data != null) {
+      data['data'] = this.data!.toJson();
+    }
+    return data;
+  }
+}
+
+class TraewellingTripDeailsData {
+  int? id;
+  String? category;
+  String? number;
+  String? lineName;
+  int? journeyNumber;
+  Origin? origin;
+  Origin? destination;
+  List<Stopovers>? stopovers;
+
+  TraewellingTripDeailsData(
+      {this.id,
+      this.category,
+      this.number,
+      this.lineName,
+      this.journeyNumber,
+      this.origin,
+      this.destination,
+      this.stopovers});
+
+  TraewellingTripDeailsData.fromJson(Map<String, dynamic> json) {
+    id = json['id'];
+    category = json['category'];
+    number = json['number'];
+    lineName = json['lineName'];
+    journeyNumber = json['journeyNumber'];
+    origin =
+        json['origin'] != null ? new Origin.fromJson(json['origin']) : null;
+    destination = json['destination'] != null
+        ? new Origin.fromJson(json['destination'])
+        : null;
+    if (json['stopovers'] != null) {
+      stopovers = <Stopovers>[];
+      json['stopovers'].forEach((v) {
+        stopovers!.add(new Stopovers.fromJson(v));
+      });
+    }
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['id'] = this.id;
+    data['category'] = this.category;
+    data['number'] = this.number;
+    data['lineName'] = this.lineName;
+    data['journeyNumber'] = this.journeyNumber;
+    if (this.origin != null) {
+      data['origin'] = this.origin!.toJson();
+    }
+    if (this.destination != null) {
+      data['destination'] = this.destination!.toJson();
+    }
+    if (this.stopovers != null) {
+      data['stopovers'] = this.stopovers!.map((v) => v.toJson()).toList();
+    }
+    return data;
+  }
+}
+
+class Stopovers {
+  int? id;
+  String? name;
+  String? rilIdentifier;
+  int? evaIdentifier;
+  String? arrival;
+  String? arrivalPlanned;
+  String? arrivalReal;
+  String? arrivalPlatformPlanned;
+  String? arrivalPlatformReal;
+  String? departure;
+  String? departurePlanned;
+  String? departureReal;
+  String? departurePlatformPlanned;
+  String? departurePlatformReal;
+  String? platform;
+  bool? isArrivalDelayed;
+  bool? isDepartureDelayed;
+  bool? cancelled;
+
+  Stopovers(
+      {this.id,
+      this.name,
+      this.rilIdentifier,
+      this.evaIdentifier,
+      this.arrival,
+      this.arrivalPlanned,
+      this.arrivalReal,
+      this.arrivalPlatformPlanned,
+      this.arrivalPlatformReal,
+      this.departure,
+      this.departurePlanned,
+      this.departureReal,
+      this.departurePlatformPlanned,
+      this.departurePlatformReal,
+      this.platform,
+      this.isArrivalDelayed,
+      this.isDepartureDelayed,
+      this.cancelled});
+
+  Stopovers.fromJson(Map<String, dynamic> json) {
+    id = json['id'];
+    name = json['name'];
+    rilIdentifier = json['rilIdentifier'];
+    evaIdentifier = json['evaIdentifier'];
+    arrival = json['arrival'];
+    arrivalPlanned = json['arrivalPlanned'];
+    arrivalReal = json['arrivalReal'];
+    arrivalPlatformPlanned = json['arrivalPlatformPlanned'];
+    arrivalPlatformReal = json['arrivalPlatformReal'];
+    departure = json['departure'];
+    departurePlanned = json['departurePlanned'];
+    departureReal = json['departureReal'];
+    departurePlatformPlanned = json['departurePlatformPlanned'];
+    departurePlatformReal = json['departurePlatformReal'];
+    platform = json['platform'];
+    isArrivalDelayed = json['isArrivalDelayed'];
+    isDepartureDelayed = json['isDepartureDelayed'];
+    cancelled = json['cancelled'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['id'] = this.id;
+    data['name'] = this.name;
+    data['rilIdentifier'] = this.rilIdentifier;
+    data['evaIdentifier'] = this.evaIdentifier;
+    data['arrival'] = this.arrival;
+    data['arrivalPlanned'] = this.arrivalPlanned;
+    data['arrivalReal'] = this.arrivalReal;
+    data['arrivalPlatformPlanned'] = this.arrivalPlatformPlanned;
+    data['arrivalPlatformReal'] = this.arrivalPlatformReal;
+    data['departure'] = this.departure;
+    data['departurePlanned'] = this.departurePlanned;
+    data['departureReal'] = this.departureReal;
+    data['departurePlatformPlanned'] = this.departurePlatformPlanned;
+    data['departurePlatformReal'] = this.departurePlatformReal;
+    data['platform'] = this.platform;
+    data['isArrivalDelayed'] = this.isArrivalDelayed;
+    data['isDepartureDelayed'] = this.isDepartureDelayed;
+    data['cancelled'] = this.cancelled;
     return data;
   }
 }
