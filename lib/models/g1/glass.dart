@@ -35,6 +35,8 @@ class Glass {
       await device.connect();
       await discoverServices();
       device.requestMtu(251);
+      device.requestConnectionPriority(
+          connectionPriorityRequest: ConnectionPriority.high);
       startHeartbeat();
     } catch (e) {
       debugPrint('[$side Glass] Connection error: $e');
