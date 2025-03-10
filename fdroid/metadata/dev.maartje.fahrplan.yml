@@ -1,0 +1,31 @@
+Categories:
+  - Internet
+License: BSD-2-Clause
+AuthorName: Maartje
+SourceCode: https://github.com/meyskens/fahrplan
+IssueTracker: https://github.com/meyskens/fahrplan/issues
+
+AutoName: Fahrplan
+Summary: "Fahrplan is a life assistant. \n"
+Description: |
+  Fahrplan is a "life assistant" that is made for the Even Realities G1 smartglasses. It is an opinionated half reverse engineered addition go the G1. It focusses less on (or not on generative) AI and more on a day to day life assistant for neurodiverse people like myself.
+
+  The name "Fahrplan" comes from the german word for "bus/train/conference schedule". It takes the concept of a "next stops" screen you see on public transport to plan for daily tasks and schedule. Thus the idea for this name.
+
+  While it is meant to offer an "OS" for the Even Realities G1 and will copy some of the original functionality like notifications it is not designed to be a full smartglasses OS.
+  
+  Features:
+  * Notification mirroring (app whitelist still needs to be build in official app, fixed soon)
+  * Update of time and weather
+  * Träwelling integration for real time train info
+  * Daily: a daily "fahrplan" presented in G1 dashboard
+  * Stops: important one off-timers presenting an immediate text message for an important timed action (eg. leave for train)
+  * HomeAssistant: send commands by holding the left button (Even AI). Transcribed locally with Wisper (self hosted also possible)
+  * Checklists: open and close lists on your dashboard by holding the right button (QuickNote) saying "checklist " or "close checklist "
+  * Debug screen: with extra fun like bad apple! (unzip assets/badapple.zip first before compiling for this)
+
+RepoType: git
+Repo: https://github.com/meyskens/fahrplan.git
+
+AutoUpdateMode: None
+UpdateCheckMode: None
