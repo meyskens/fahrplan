@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:fahrplan/models/fahrplan/widgets/fahrplan_widget.dart';
 import 'package:fahrplan/utils/station_codes.dart';
+import 'package:fahrplan/utils/treinposities.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:fahrplan/models/g1/note.dart';
@@ -193,6 +195,7 @@ class TraewellingWidget implements FahrplanWidget {
     }
 
     final stops = List<String>.empty(growable: true);
+    List<TreinPositiesStop>? nsData;
 
     for (final stopover in details.data!.stopovers!) {
       final plannedArrival = DateTime.parse(stopover.arrivalPlanned ?? '');
@@ -205,10 +208,7 @@ class TraewellingWidget implements FahrplanWidget {
           ? null
           : DateTime.parse(stopover.departureReal!);
 
-      final departureTime = realDeparture ?? plannedDeparture;
-      if (departureTime.isBefore(DateTime.now())) {
-        continue;
-      }
+      var departureTime = realDeparture ?? plannedDeparture;
 
       var name = stopover.name ?? '';
       final evaIdentifier = stopover.evaIdentifier?.toString() ?? '';
@@ -218,10 +218,40 @@ class TraewellingWidget implements FahrplanWidget {
         name = stopover.rilIdentifier!;
       }
 
+      String? overWriteDeparture;
+      String? overWriteDepartureDelay;
+      String? overWriteArrival;
+      String? overWriteArrivalDelay;
+
       if (evaIdentifier.startsWith("84")) {
         debugPrint('Loading NS station codes');
         await ns.load();
         name = ns.getStationCodeForUIC(evaIdentifier) ?? name;
+
+        if (nsData == null && details.data?.lineName != null) {
+          try {
+            nsData = await Treinposities.getRealtime(
+                plannedDeparture, details.data!.lineName!);
+            debugPrint('Loaded NS data');
+          } catch (e) {
+            debugPrint('Failed to load NS data: ${e.toString()}');
+          }
+        }
+
+        if (nsData != null) {
+          // find the station in the data on stationcode.toLower match
+          try {
+            final nsStop = nsData.firstWhere((element) =>
+                element.stationCode.toLowerCase() == name.toLowerCase());
+            overWriteDeparture = nsStop.departure;
+            overWriteDepartureDelay = nsStop.departureDelay;
+
+            overWriteArrival = nsStop.arrival;
+            overWriteArrivalDelay = nsStop.arrivalDelay;
+          } catch (e) {
+            debugPrint('Failed to find station in NS data: ${e.toString()}');
+          }
+        }
       }
       if (evaIdentifier.startsWith("88")) {
         await sncb.load();
@@ -230,14 +260,24 @@ class TraewellingWidget implements FahrplanWidget {
 
       var arrival = DateFormat('HH:mm').format(plannedArrival.toLocal());
       if (realArrival != null) {
-        arrival +=
-            ' (+${realArrival.difference(plannedArrival).inMinutes} ${DateFormat('HH:mm').format(realArrival.toLocal())})';
+        arrival += ' (+${realArrival.difference(plannedArrival).inMinutes} ';
+        if (realArrival.difference(plannedArrival).inMinutes > 0) {
+          arrival += '${DateFormat('HH:mm').format(realArrival.toLocal())})';
+        } else {
+          arrival += ')';
+        }
       }
 
       var departure = DateFormat('HH:mm').format(plannedDeparture.toLocal());
       if (realDeparture != null) {
         departure +=
-            ' (+${realDeparture.difference(plannedDeparture).inMinutes} ${DateFormat('HH:mm').format(realDeparture.toLocal())})';
+            ' (+${realDeparture.difference(plannedDeparture).inMinutes} ';
+        if (realDeparture.difference(plannedDeparture).inMinutes > 0) {
+          departure +=
+              '${DateFormat('HH:mm').format(realDeparture.toLocal())})';
+        } else {
+          departure += ')';
+        }
       }
 
       var canceled = '';
@@ -248,6 +288,53 @@ class TraewellingWidget implements FahrplanWidget {
       var stopLine =
           "${NoteSupportedIcons.CHECKBOX} $arrival-$departure $name $canceled";
 
+      if (overWriteDeparture != null ||
+          overWriteArrival != null ||
+          overWriteDepartureDelay != null ||
+          overWriteArrivalDelay != null) {
+        if (overWriteArrivalDelay != null &&
+            overWriteArrivalDelay.isNotEmpty &&
+            overWriteArrivalDelay != '0') {
+          // calculate new arrival time
+          final hour = int.parse(overWriteArrival!.split(':')[0]);
+          final minute = int.parse(overWriteArrival.split(':')[1]);
+          final arrivalTime = DateTime(plannedArrival.year,
+              plannedArrival.month, plannedArrival.day, hour, minute);
+          final newArrivalTime = arrivalTime
+              .add(Duration(minutes: int.parse(overWriteArrivalDelay)));
+
+          overWriteArrival =
+              '$overWriteArrival (+$overWriteArrivalDelay ${DateFormat('HH:mm').format(newArrivalTime.toLocal())})';
+        } else {
+          overWriteArrival = '$overWriteArrival (+0)';
+        }
+
+        if (overWriteDepartureDelay != null &&
+            overWriteDepartureDelay.isNotEmpty &&
+            overWriteDepartureDelay != '0') {
+          // calculate new departure time
+          final hour = int.parse(overWriteDeparture!.split(':')[0]);
+          final minute = int.parse(overWriteDeparture.split(':')[1]);
+          final departureTimeNew = DateTime(plannedDeparture.year,
+              plannedDeparture.month, plannedDeparture.day, hour, minute);
+          final newDepartureTime = departureTimeNew
+              .add(Duration(minutes: int.parse(overWriteDepartureDelay)));
+          departureTime = departureTimeNew;
+
+          overWriteDeparture =
+              '$overWriteDeparture (+$overWriteDepartureDelay ${DateFormat('HH:mm').format(newDepartureTime.toLocal())})';
+        } else {
+          overWriteDeparture = '$overWriteDeparture (+0)';
+        }
+
+        stopLine =
+            "${NoteSupportedIcons.CHECKBOX} $overWriteArrival-$overWriteDeparture $name $canceled";
+      }
+
+      if (departureTime.isBefore(DateTime.now())) {
+        continue;
+      }
+      debugPrint(stopLine);
       stops.add(stopLine);
     }
 
