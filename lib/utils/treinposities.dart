@@ -65,15 +65,23 @@ class Treinposities {
 
       // parse if there is " +x" for the delay
       var arrivalDelay = "";
-      if (arrivalDelay.split("+").length > 1) {
-        arrivalDelay = arrival.split("+")[1].trim();
-        arrival = arrival.split("+")[0].trim();
+      if (arrival.split('+').length > 1) {
+        arrivalDelay = arrival.split('+')[1].trim();
+        arrival = arrival.split('+')[0].trim();
+
+        if (arrivalDelay.split(' ').length > 1) {
+          arrivalDelay = arrivalDelay.split(' ')[0];
+        }
       }
 
       var departureDelay = "";
-      if (departureDelay.split("+").length > 1) {
+      if (departure.split("+").length > 1) {
         departureDelay = departure.split("+")[1].trim();
         departure = departure.split("+")[0].trim();
+
+        if (departureDelay.split(' ').length > 1) {
+          departureDelay = departureDelay.split(' ')[0];
+        }
       }
 
       // get station code from <href="/rit_per_station/$CODE/$NUMBER"
