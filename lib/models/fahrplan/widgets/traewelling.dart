@@ -260,9 +260,9 @@ class TraewellingWidget implements FahrplanWidget {
 
       var arrival = DateFormat('HH:mm').format(plannedArrival.toLocal());
       if (realArrival != null) {
-        arrival += ' (+${realArrival.difference(plannedArrival).inMinutes} ';
+        arrival += ' (+${realArrival.difference(plannedArrival).inMinutes}';
         if (realArrival.difference(plannedArrival).inMinutes > 0) {
-          arrival += '${DateFormat('HH:mm').format(realArrival.toLocal())})';
+          arrival += ' ${DateFormat('HH:mm').format(realArrival.toLocal())})';
         } else {
           arrival += ')';
         }
@@ -271,10 +271,10 @@ class TraewellingWidget implements FahrplanWidget {
       var departure = DateFormat('HH:mm').format(plannedDeparture.toLocal());
       if (realDeparture != null) {
         departure +=
-            ' (+${realDeparture.difference(plannedDeparture).inMinutes} ';
+            ' (+${realDeparture.difference(plannedDeparture).inMinutes}';
         if (realDeparture.difference(plannedDeparture).inMinutes > 0) {
           departure +=
-              '${DateFormat('HH:mm').format(realDeparture.toLocal())})';
+              ' ${DateFormat('HH:mm').format(realDeparture.toLocal())})';
         } else {
           departure += ')';
         }
