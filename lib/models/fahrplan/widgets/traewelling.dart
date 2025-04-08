@@ -237,7 +237,17 @@ class TraewellingWidget implements FahrplanWidget {
             debugPrint('Failed to load NS data: ${e.toString()}');
           }
         }
+      }
+      if (evaIdentifier.startsWith("88")) {
+        await sncb.load();
+        name = sncb.getStationCodeForName(name) ?? name;
+      }
 
+      // if the train was on NS take the NS data as source of truth for SNCB stations
+      if ((evaIdentifier.startsWith("88") || evaIdentifier.startsWith("84")) &&
+          details.data!.stopovers!
+              .where((t) => t.evaIdentifier!.toString().startsWith("84"))
+              .isNotEmpty) {
         if (nsData != null) {
           // find the station in the data on stationcode.toLower match
           try {
@@ -252,10 +262,6 @@ class TraewellingWidget implements FahrplanWidget {
             debugPrint('Failed to find station in NS data: ${e.toString()}');
           }
         }
-      }
-      if (evaIdentifier.startsWith("88")) {
-        await sncb.load();
-        name = sncb.getStationCodeForName(name) ?? name;
       }
 
       var arrival = DateFormat('HH:mm').format(plannedArrival.toLocal());
