@@ -193,41 +193,45 @@ class WhisperSettingsPageState extends State<WhisperSettingsPage> {
       appBar: AppBar(
         title: Text('Whisper Settings'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Select Mode:', style: TextStyle(fontSize: 18)),
-          SizedBox(height: 10),
-          DropdownButton(
-            value: _selectedMode,
-            onChanged: (String? newValue) => _saveSelectedMode(newValue!),
-            isExpanded: true,
-            items: [
-              DropdownMenuItem(
-                value: "local",
-                child: Text("Local"),
-              ),
-              DropdownMenuItem(
-                value: "remote",
-                child: Text("Remote"),
-              )
-            ],
-          ),
-          SizedBox(height: 20),
-          Text('Select Language:', style: TextStyle(fontSize: 18)),
-          SizedBox(height: 10),
-          DropdownButton(
-              value: _selectedLanguage,
-              onChanged: (String? newValue) => _saveSelectedLanguage(newValue!),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Select Mode:', style: TextStyle(fontSize: 18)),
+            SizedBox(height: 10),
+            DropdownButton(
+              value: _selectedMode,
+              onChanged: (String? newValue) => _saveSelectedMode(newValue!),
               isExpanded: true,
-              items: _languages.map<DropdownMenuItem<String>>((String lang) {
-                return DropdownMenuItem<String>(
-                  value: lang,
-                  child: Text(lang),
-                );
-              }).toList()),
-          ...(_selectedMode == "local" ? localOpts : remoteOpts),
-        ]),
+              items: [
+                DropdownMenuItem(
+                  value: "local",
+                  child: Text("Local"),
+                ),
+                DropdownMenuItem(
+                  value: "remote",
+                  child: Text("Remote"),
+                )
+              ],
+            ),
+            SizedBox(height: 20),
+            Text('Select Language:', style: TextStyle(fontSize: 18)),
+            SizedBox(height: 10),
+            DropdownButton(
+                value: _selectedLanguage,
+                onChanged: (String? newValue) =>
+                    _saveSelectedLanguage(newValue!),
+                isExpanded: true,
+                items: _languages.map<DropdownMenuItem<String>>((String lang) {
+                  return DropdownMenuItem<String>(
+                    value: lang,
+                    child: Text(lang),
+                  );
+                }).toList()),
+            ...(_selectedMode == "local" ? localOpts : remoteOpts),
+          ]),
+        ),
       ),
     );
   }
