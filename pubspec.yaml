@@ -51,7 +51,6 @@ dependencies:
   url_launcher: ^6.3.1
   uuid: ^4.5.1
   device_calendar: ^4.3.3
-  whisper_flutter_new: ^1.0.1
   duration_picker: ^1.2.0
   fuzzywuzzy: ^1.2.0
   dart_openai: ^5.1.0
@@ -61,6 +60,7 @@ dependencies:
   csv: ^6.0.0
   fast_csv: ^0.2.11
   chaleno: ^0.0.8
+  whisper_ggml: ^1.1.1
 
 dev_dependencies:
   flutter_test:

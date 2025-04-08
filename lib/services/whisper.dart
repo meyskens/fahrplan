@@ -8,7 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
-import 'package:whisper_flutter_new/whisper_flutter_new.dart';
+import 'package:whisper_ggml/whisper_ggml.dart';
 import 'package:web_socket_client/web_socket_client.dart';
 
 abstract class WhisperService {
@@ -81,32 +81,19 @@ class WhisperLocalService implements WhisperService {
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    final Whisper whisper = Whisper(
-        model:
-            FahrplanWhisperModel(prefs.getString('whisper_model') ?? '').model,
-        downloadHost:
-            "https://huggingface.co/ggerganov/whisper.cpp/resolve/main");
+    final whisper = WhisperController();
+    final model = FahrplanWhisperModel(prefs.getString('whisper_model') ?? '');
 
-    final String? whisperVersion = await whisper.getVersion();
-    debugPrint(whisperVersion);
-
-    final transcription = await whisper.transcribe(
-      transcribeRequest: TranscribeRequest(
-        audio: wavPath,
-        isTranslate: false,
-        isNoTimestamps: true,
-        splitOnWord: true,
-        diarize: false,
-        isSpecialTokens: false,
-        nProcessors: 2,
-        language: prefs.getString('whisper_language') ?? 'en',
-      ),
+    final result = await whisper.transcribe(
+      model: model.model,
+      audioPath: wavPath,
+      lang: prefs.getString('whisper_language') ?? 'en',
     );
 
     // delete wav file
     await File(wavPath).delete();
 
-    return transcription.text;
+    return result!.transcription.text;
   }
 }
 
