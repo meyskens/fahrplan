@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui';
 
 import 'package:fahrplan/models/fahrplan/calendar.dart';
 import 'package:fahrplan/models/fahrplan/checklist.dart';
@@ -8,6 +10,7 @@ import 'package:fahrplan/services/bluetooth_manager.dart';
 import 'package:fahrplan/services/stops_manager.dart';
 import 'package:fahrplan/utils/ui_perfs.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -42,7 +45,42 @@ void main() async {
   await BluetoothManager.singleton.initialize();
   BluetoothManager.singleton.attemptReconnectFromStorage();
 
+  var channel = const MethodChannel('dev.maartje.fahrplan/background_service');
+  var callbackHandle = PluginUtilities.getCallbackHandle(backgroundMain);
+  channel.invokeMethod('startService', callbackHandle?.toRawHandle());
+
   runApp(const App());
+}
+
+void backgroundMain() {
+  WidgetsFlutterBinding.ensureInitialized();
+}
+
+class AppRetainWidget extends StatelessWidget {
+  AppRetainWidget({super.key, required this.child});
+
+  final Widget child;
+
+  final _channel = const MethodChannel('dev.maartje.fahrplan/app_retain');
+
+  @override
+  Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: () async {
+        if (Platform.isAndroid) {
+          if (Navigator.of(context).canPop()) {
+            return true;
+          } else {
+            _channel.invokeMethod('sendToBackground');
+            return false;
+          }
+        } else {
+          return true;
+        }
+      },
+      child: child,
+    );
+  }
 }
 
 class App extends StatelessWidget {
@@ -50,8 +88,10 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: HomePage(),
+    return MaterialApp(
+      home: AppRetainWidget(
+        child: HomePage(),
+      ),
     );
   }
 }

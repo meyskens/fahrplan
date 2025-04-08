@@ -1,5 +1,6 @@
 package dev.maartje.fahrplan
 
+import android.os.Bundle
 import androidx.annotation.NonNull;
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -9,6 +10,16 @@ import dev.maartje.fahrplan.cpp.Cpp
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "dev.maartje.fahrplan/channel"
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        Notifications.createNotificationChannels(this)
+    }
+
+     override fun onDestroy() {
+        super.onDestroy()
+        BackgroundService.stopService(this@MainActivity, null)
+    }
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -27,6 +38,35 @@ class MainActivity: FlutterActivity() {
                 }
             } else {
                 result.notImplemented()
+            }
+        }
+
+        val binaryMessenger = flutterEngine.dartExecutor.binaryMessenger
+        MethodChannel(binaryMessenger, "dev.maartje.fahrplan/background_service").apply {
+            setMethodCallHandler { method, result ->
+                if (method.method == "startService") {
+                    val callbackRawHandle = method.arguments as Long
+                    BackgroundService.startService(this@MainActivity, callbackRawHandle)
+                    result.success(null)
+                } else if (method.method == "stopService") {
+                    println("inside kotlin hello2")
+                    val callbackRawHandle = method.arguments as Long
+                    BackgroundService.stopService(this@MainActivity, callbackRawHandle)
+                    result.success(null)
+                } else {
+                    result.notImplemented()
+                }
+            }
+        }
+
+        MethodChannel(binaryMessenger, "dev.maartje.fahrplan/app_retain").apply {
+            setMethodCallHandler { method, result ->
+                if (method.method == "sendToBackground") {
+                    moveTaskToBack(true)
+                    result.success(null)
+                } else {
+                    result.notImplemented()
+                }
             }
         }
     }
