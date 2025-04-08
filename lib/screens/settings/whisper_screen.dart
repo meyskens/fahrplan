@@ -1,7 +1,7 @@
 import 'package:fahrplan/models/fahrplan/whispermodel.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:whisper_flutter_new/whisper_flutter_new.dart';
+import 'package:whisper_ggml/whisper_ggml.dart';
 
 class WhisperSettingsPage extends StatefulWidget {
   const WhisperSettingsPage({super.key});
@@ -93,19 +93,12 @@ class WhisperSettingsPageState extends State<WhisperSettingsPage> {
 
   Future<void> _downloadModel() async {
     // Implement the logic to download the model here
-    final Whisper whisper = Whisper(
-        model: FahrplanWhisperModel(_selectedModel!).model,
-        downloadHost:
-            "https://huggingface.co/ggerganov/whisper.cpp/resolve/main");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Downloading model: $_selectedModel')),
-    );
+    final whisper = WhisperController();
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final model = FahrplanWhisperModel(prefs.getString('whisper_model') ?? '');
 
     try {
-      await whisper.transcribe(
-          transcribeRequest: TranscribeRequest(
-        audio: "noexist.wav",
-      ));
+      await whisper.downloadModel(model.model);
     } catch (e) {}
 
     ScaffoldMessenger.of(context).showSnackBar(

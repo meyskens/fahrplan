@@ -1,4 +1,4 @@
-import 'package:whisper_flutter_new/whisper_flutter_new.dart';
+import 'package:whisper_ggml/whisper_ggml.dart';
 
 class FahrplanWhisperModel {
   String name;
@@ -8,8 +8,7 @@ class FahrplanWhisperModel {
     'base',
     'small',
     'medium',
-    'large-v1',
-    'large-v2'
+    'large',
   ];
 
   FahrplanWhisperModel(this.name);
@@ -24,10 +23,8 @@ class FahrplanWhisperModel {
         return WhisperModel.small;
       case 'medium':
         return WhisperModel.medium;
-      case 'large-v1':
-        return WhisperModel.largeV1;
-      case 'large-v2':
-        return WhisperModel.largeV2;
+      case 'large':
+        return WhisperModel.large;
       default:
         return WhisperModel.base;
     }
