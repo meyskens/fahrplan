@@ -98,25 +98,27 @@ class WhisperLocalService implements WhisperService {
 }
 
 class WhisperRemoteService implements WhisperService {
-  late SharedPreferences _prefs;
   Future<String?> getBaseURL() async {
-    return _prefs.getString('whisper_api_url');
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('whisper_api_url');
   }
 
   Future<String?> getApiKey() async {
-    return _prefs.getString('whisper_api_key');
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('whisper_api_key');
   }
 
   Future<String?> getModel() async {
-    return _prefs.getString('whisper_remote_model');
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('whisper_remote_model');
   }
 
   Future<String?> getLanguage() async {
-    return _prefs.getString('whisper_language');
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('whisper_language');
   }
 
   Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
     final url = await getBaseURL();
     if (url == null) {
       throw Exception("no Whisper Remote URL set");
