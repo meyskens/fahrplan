@@ -10,7 +10,7 @@ import 'package:fahrplan/models/g1/setup.dart';
 import 'package:fahrplan/services/dashboard_controller.dart';
 import 'package:fahrplan/models/g1/note.dart';
 import 'package:fahrplan/models/g1/notification.dart';
-import 'package:fahrplan/models/g1/text.dart';
+
 import 'package:fahrplan/services/notifications_listener.dart';
 import 'package:fahrplan/services/stops_manager.dart';
 import 'package:fahrplan/utils/utils.dart';
@@ -343,17 +343,201 @@ class BluetoothManager {
 
   Future<void> sendText(String text,
       {Duration delay = const Duration(seconds: 5)}) async {
-    final textMsg = TextMessage(text);
-    List<List<int>> packets = textMsg.constructSendText();
+    if (!isConnected) {
+      debugPrint('Not connected to glasses');
+      return;
+    }
 
-    for (int i = 0; i < packets.length; i++) {
-      await sendCommandToGlasses(packets[i]);
-      if (i < 2) {
-        // init packet
-        await Future.delayed(Duration(milliseconds: 300));
-      } else {
-        await Future.delayed(delay);
+    if (text.trim().isEmpty) {
+      // Send exit command for empty text
+      await sendCommandToGlasses([0x18]);
+      return;
+    }
+
+    List<List<int>> chunks = _createTextWallChunks(text);
+    await _sendChunks(chunks);
+  }
+
+  static const int _TEXT_COMMAND = 0x4E;
+  static const int _DISPLAY_WIDTH = 488;
+  static const int _LINES_PER_SCREEN = 5;
+  static const int _MAX_CHUNK_SIZE = 176;
+  int _textSeqNum = 0;
+
+  List<List<int>> _createTextWallChunks(String text) {
+    int margin = 5;
+
+    // Get width of single space character
+    int spaceWidth = _calculateTextWidth(" ");
+
+    // Calculate effective display width after accounting for margins
+    int marginWidth = margin * spaceWidth;
+    int effectiveWidth = _DISPLAY_WIDTH - (2 * marginWidth);
+
+    // Split text into lines based on effective display width
+    List<String> lines = _splitIntoLines(text, effectiveWidth);
+
+    // Calculate total pages (hardcoded to 1 for now)
+    int totalPages = 1;
+
+    List<List<int>> allChunks = [];
+
+    // Process the single page
+    int page = 0;
+
+    // Get lines for current page
+    int startLine = page * _LINES_PER_SCREEN;
+    int endLine = (startLine + _LINES_PER_SCREEN).clamp(0, lines.length);
+    List<String> pageLines = lines.sublist(startLine, endLine);
+
+    // Combine lines for this page with proper indentation
+    StringBuffer pageText = StringBuffer();
+
+    for (String line in pageLines) {
+      // Add the exact number of spaces for indentation
+      String indentation = " " * margin;
+      pageText.write(indentation + line + "\n");
+    }
+
+    List<int> textBytes = pageText.toString().codeUnits;
+    int totalChunks = (textBytes.length / _MAX_CHUNK_SIZE).ceil();
+
+    // Create chunks for this page
+    for (int i = 0; i < totalChunks; i++) {
+      int start = i * _MAX_CHUNK_SIZE;
+      int end = (start + _MAX_CHUNK_SIZE).clamp(0, textBytes.length);
+      List<int> payloadChunk = textBytes.sublist(start, end);
+
+      // Create header with protocol specifications
+      int screenStatus = 0x71; // New content (0x01) + Text Show (0x70)
+      List<int> header = [
+        _TEXT_COMMAND, // Command type
+        _textSeqNum, // Sequence number
+        totalChunks, // Total packages
+        i, // Current package number
+        screenStatus, // Screen status
+        0x00, // new_char_pos0 (high)
+        0x00, // new_char_pos1 (low)
+        page, // Current page number
+        totalPages // Max page number
+      ];
+
+      // Combine header and payload
+      List<int> chunk = [...header, ...payloadChunk];
+      allChunks.add(chunk);
+    }
+
+    // Increment sequence number for next page
+    _textSeqNum = (_textSeqNum + 1) % 256;
+
+    return allChunks;
+  }
+
+  int _calculateTextWidth(String text) {
+    // Simplified width calculation - in a real implementation,
+    // this would use actual font metrics
+    return text.length * 12; // Approximate character width
+  }
+
+  List<String> _splitIntoLines(String text, int maxDisplayWidth) {
+    // Replace specific symbols
+    text = text.replaceAll("⬆", "^").replaceAll("⟶", "-");
+
+    List<String> lines = [];
+
+    // Handle empty or single space case
+    if (text.isEmpty || text == " ") {
+      lines.add(text);
+      return lines;
+    }
+
+    // Split by newlines first
+    List<String> rawLines = text.split("\n");
+
+    for (String rawLine in rawLines) {
+      // Add empty lines for newlines
+      if (rawLine.isEmpty) {
+        lines.add("");
+        continue;
       }
+
+      int lineLength = rawLine.length;
+      int startIndex = 0;
+
+      while (startIndex < lineLength) {
+        // Get maximum possible end index
+        int endIndex = lineLength;
+
+        // Calculate width of the entire remaining text
+        int lineWidth = _calculateSubstringWidth(rawLine, startIndex, endIndex);
+
+        // If entire line fits, add it and move to next line
+        if (lineWidth <= maxDisplayWidth) {
+          lines.add(rawLine.substring(startIndex));
+          break;
+        }
+
+        // Binary search to find the maximum number of characters that fit
+        int left = startIndex + 1;
+        int right = lineLength;
+        int bestSplitIndex = startIndex + 1;
+
+        while (left <= right) {
+          int mid = left + ((right - left) / 2).floor();
+          int width = _calculateSubstringWidth(rawLine, startIndex, mid);
+
+          if (width <= maxDisplayWidth) {
+            bestSplitIndex = mid;
+            left = mid + 1;
+          } else {
+            right = mid - 1;
+          }
+        }
+
+        // Now find a good place to break (preferably at a space)
+        int splitIndex = bestSplitIndex;
+
+        // Look for a space to break at
+        bool foundSpace = false;
+        for (int i = bestSplitIndex; i > startIndex; i--) {
+          if (rawLine[i - 1] == ' ') {
+            splitIndex = i;
+            foundSpace = true;
+            break;
+          }
+        }
+
+        // If we couldn't find a space in a reasonable range, use the calculated split point
+        if (!foundSpace && bestSplitIndex - startIndex > 2) {
+          splitIndex = bestSplitIndex;
+        }
+
+        // Add the line
+        String line = rawLine.substring(startIndex, splitIndex).trim();
+        lines.add(line);
+
+        // Skip any spaces at the beginning of the next line
+        while (splitIndex < lineLength && rawLine[splitIndex] == ' ') {
+          splitIndex++;
+        }
+
+        startIndex = splitIndex;
+      }
+    }
+
+    return lines;
+  }
+
+  int _calculateSubstringWidth(String text, int start, int end) {
+    return _calculateTextWidth(text.substring(start, end));
+  }
+
+  Future<void> _sendChunks(List<List<int>> chunks) async {
+    // Send each chunk with a delay between sends
+    for (List<int> chunk in chunks) {
+      await sendCommandToGlasses(chunk);
+      await Future.delayed(
+          Duration(milliseconds: 5)); // Small delay between chunks
     }
   }
 
