@@ -61,6 +61,8 @@ dependencies:
   fast_csv: ^0.2.11
   chaleno: ^0.0.8
   whisper_ggml: ^1.1.1
+  audio_service: ^0.18.17
+  audio_session: ^0.1.25
 
 dev_dependencies:
   flutter_test:

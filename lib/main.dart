@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:audio_service/audio_service.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:fahrplan/models/fahrplan/calendar.dart';
 import 'package:fahrplan/models/fahrplan/checklist.dart';
 import 'package:fahrplan/models/fahrplan/daily.dart';
@@ -18,6 +20,8 @@ import 'screens/home_screen.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
+
+late AudioHandler _audioHandler;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,7 +53,21 @@ void main() async {
   var callbackHandle = PluginUtilities.getCallbackHandle(backgroundMain);
   channel.invokeMethod('startService', callbackHandle?.toRawHandle());
 
+  _audioHandler = await AudioService.init(
+    builder: () => MyAudioHandler(),
+    config: AudioServiceConfig(
+      androidNotificationChannelId: 'dev.maartje.fahrplan.channel.audio',
+      androidNotificationChannelName: 'Music playback',
+    ),
+  );
+
+  final session = await AudioSession.instance;
+  await session.configure(AudioSessionConfiguration.speech());
+  session.setActive(true);
+
   runApp(const App());
+
+  _audioHandler.play();
 }
 
 void backgroundMain() {
@@ -245,4 +263,37 @@ void _handleDeleteAction(String actionId) async {
     }
     StopsManager().reload();
   }
+}
+
+class MyAudioHandler extends BaseAudioHandler
+    with
+        QueueHandler, // mix in default queue callback implementations
+        SeekHandler {
+  // mix in default seek callback implementations
+
+  Future<void> fakeMediaPlayback() async {
+    playbackState.add(PlaybackState(
+      controls: const [],
+      systemActions: const {},
+      androidCompactActionIndices: const [],
+      processingState: AudioProcessingState.ready,
+      playing: true,
+      updatePosition: Duration(milliseconds: 54321),
+      bufferedPosition: Duration(milliseconds: 65432),
+      speed: 1.0,
+      queueIndex: 0,
+    ));
+  }
+
+  // The most common callbacks:
+  @override
+  Future<void> play() => fakeMediaPlayback();
+  @override
+  Future<void> pause() => Future.value();
+  @override
+  Future<void> stop() => Future.value();
+  @override
+  Future<void> seek(Duration position) => Future.value();
+  @override
+  Future<void> skipToQueueItem(int i) => Future.value();
 }
