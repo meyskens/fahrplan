@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "dev.maartje.fahrplan"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.11902837"
+    ndkVersion = "27.3.13750724"
 
   
     compileOptions {
@@ -61,7 +61,7 @@ flutter {
 }
 
 dependencies {
-  coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.2'
+  coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
 }
 
 subprojects {
