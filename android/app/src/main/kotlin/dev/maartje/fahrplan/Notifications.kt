@@ -26,7 +26,7 @@ object Notifications {
     }
 
     fun buildForegroundNotification(context: Context): Notification {
-        println("creating notificationnn");
+        println("creating notificationn");
         return NotificationCompat
             .Builder(context, CHANNEL_ID_BACKGROUND_SERVICE)
             .setSmallIcon(R.mipmap.ic_launcher)

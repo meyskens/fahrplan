@@ -7,8 +7,9 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugins.GeneratedPluginRegistrant
 import io.flutter.plugin.common.MethodChannel
 import dev.maartje.fahrplan.cpp.Cpp
+import com.ryanheise.audioservice.AudioServiceActivity;
 
-class MainActivity: FlutterActivity() {
+class MainActivity: AudioServiceActivity() {
     private val CHANNEL = "dev.maartje.fahrplan/channel"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,7 +50,6 @@ class MainActivity: FlutterActivity() {
                     BackgroundService.startService(this@MainActivity, callbackRawHandle)
                     result.success(null)
                 } else if (method.method == "stopService") {
-                    println("inside kotlin hello2")
                     val callbackRawHandle = method.arguments as Long
                     BackgroundService.stopService(this@MainActivity, callbackRawHandle)
                     result.success(null)
