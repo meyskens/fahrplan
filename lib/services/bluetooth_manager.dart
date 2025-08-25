@@ -115,6 +115,29 @@ class BluetoothManager {
     }
   }
 
+  Future<bool> requestMicrophonePermission() async {
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      return true; // Desktop platforms don't need explicit permission requests
+    }
+
+    PermissionStatus status = await Permission.microphone.status;
+
+    if (status.isGranted) {
+      return true;
+    }
+
+    if (status.isDenied) {
+      status = await Permission.microphone.request();
+    }
+
+    if (status.isPermanentlyDenied) {
+      await openAppSettings();
+      return false;
+    }
+
+    return status.isGranted;
+  }
+
   Future<void> attemptReconnectFromStorage() async {
     await initialize();
 

@@ -18,25 +18,21 @@ class TranscribeScreen extends StatefulWidget {
 class _TranscribeScreenState extends State<TranscribeScreen> {
   final BluetoothManager bluetoothManager = BluetoothManager();
   final TextEditingController _textController = TextEditingController();
-  WhisperRemoteService wr = WhisperRemoteService();
+  WhisperService? wr;
   Timer? fetchVoiceTimer;
 
   StreamController<Uint8List>? voiceData;
   StreamController<String>? textStream;
 
   void _startTranscription() async {
+    wr ??= await WhisperService.service();
     if (!bluetoothManager.isConnected) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Glasses are not connected')),
       );
       return;
     }
-    if ((await wr.getBaseURL()) == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Only remote Whisper is supported')),
-      );
-      return;
-    }
+
     final tr = Translate(
         fromLanguage: TranslateLanguages.FRENCH,
         toLanguage: TranslateLanguages.ENGLISH);
@@ -63,7 +59,7 @@ class _TranscribeScreenState extends State<TranscribeScreen> {
       }
     });
 
-    wr.transcribeLive(voiceData!.stream, textStream!);
+    wr!.transcribeLive(voiceData!.stream, textStream!);
 
     await for (String line in textStream!.stream) {
       if (line.length > 220) {

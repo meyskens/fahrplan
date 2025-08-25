@@ -4,6 +4,7 @@ import 'package:fahrplan/screens/settings/homeassistant_screen.dart';
 import 'package:fahrplan/screens/settings/notifications_screen.dart';
 import 'package:fahrplan/screens/settings/traewelling_screen.dart';
 import 'package:fahrplan/screens/settings/ui_settings.dart';
+import 'package:fahrplan/screens/settings/wakeword_screen.dart';
 import 'package:fahrplan/screens/settings/whisper_screen.dart';
 import 'package:fahrplan/widgets/about_dialog.dart';
 import 'package:flutter/material.dart';
@@ -83,6 +84,22 @@ class SettingsPage extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => WhisperSettingsPage()),
+              );
+            },
+          ),
+          ListTile(
+            title: Row(
+              children: [
+                Icon(Icons.record_voice_over),
+                SizedBox(width: 10),
+                Text('Wake Word'),
+              ],
+            ),
+            trailing: Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => WakeWordSettingsPage()),
               );
             },
           ),

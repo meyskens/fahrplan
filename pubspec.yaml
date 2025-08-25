@@ -63,10 +63,11 @@ dependencies:
   csv: ^6.0.0
   fast_csv: ^0.2.11
   chaleno: ^0.0.8
-  whisper_ggml: ^1.5.0
   audio_service: ^0.18.17
   audio_session: ^0.2.2
-
+  porcupine_flutter: ^3.0.5
+  audioplayers: ^6.5.0
+  whisper_ggml: ^1.5.0
 
 dev_dependencies:
   flutter_test:
@@ -92,6 +93,8 @@ flutter:
     - assets/icons/
     - assets/badapple/
     - assets/train-data/
+    - assets/whisper/
+    - assets/okay-glass.ppn
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
