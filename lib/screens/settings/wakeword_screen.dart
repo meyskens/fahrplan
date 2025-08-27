@@ -1,4 +1,5 @@
 import 'package:fahrplan/utils/wakeword_settings.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class WakeWordSettingsPage extends StatefulWidget {
@@ -9,7 +10,8 @@ class WakeWordSettingsPage extends StatefulWidget {
 }
 
 class WakeWordSettingsPageState extends State<WakeWordSettingsPage> {
-  final _accessKeyController = TextEditingController();
+  final _debugAccessKeyController = TextEditingController();
+  final _releaseAccessKeyController = TextEditingController();
   bool _isEnabled = false;
 
   @override
@@ -19,28 +21,38 @@ class WakeWordSettingsPageState extends State<WakeWordSettingsPage> {
   }
 
   Future<void> _loadSettings() async {
-    final accessKey = await WakeWordSettings.getAccessKey();
+    final debugAccessKey = await WakeWordSettings.getDebugAccessKey();
+    final releaseAccessKey = await WakeWordSettings.getReleaseAccessKey();
     final isEnabled = await WakeWordSettings.isEnabled();
 
     setState(() {
-      _accessKeyController.text = accessKey;
-      // Only enable if there's an access key
-      _isEnabled = isEnabled && accessKey.isNotEmpty;
+      _debugAccessKeyController.text = debugAccessKey;
+      _releaseAccessKeyController.text = releaseAccessKey;
+      // Only enable if there's an access key for the current mode
+      _isEnabled = isEnabled;
     });
   }
 
   Future<void> _saveSettings() async {
-    if (_isEnabled && _accessKeyController.text.trim().isEmpty) {
+    final currentAccessKey = kDebugMode
+        ? _debugAccessKeyController.text.trim()
+        : _releaseAccessKeyController.text.trim();
+
+    if (_isEnabled && currentAccessKey.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Access key is required to enable wake word detection'),
+        SnackBar(
+          content: Text(
+              'Access key is required to enable wake word detection for ${kDebugMode ? 'debug' : 'release'} mode'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    await WakeWordSettings.setAccessKey(_accessKeyController.text.trim());
+    await WakeWordSettings.setDebugAccessKey(
+        _debugAccessKeyController.text.trim());
+    await WakeWordSettings.setReleaseAccessKey(
+        _releaseAccessKeyController.text.trim());
     await WakeWordSettings.setEnabled(_isEnabled);
 
     if (mounted) {
@@ -52,12 +64,17 @@ class WakeWordSettingsPageState extends State<WakeWordSettingsPage> {
 
   @override
   void dispose() {
-    _accessKeyController.dispose();
+    _debugAccessKeyController.dispose();
+    _releaseAccessKeyController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final currentAccessKey = kDebugMode
+        ? _debugAccessKeyController.text.trim()
+        : _releaseAccessKeyController.text.trim();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Wake Word Settings'),
@@ -70,17 +87,27 @@ class WakeWordSettingsPageState extends State<WakeWordSettingsPage> {
               'Porcupine Wake Word Detection',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
+            const SizedBox(height: 8),
+            Text(
+              'Currently running in ${kDebugMode ? 'DEBUG' : 'RELEASE'} mode',
+              style: TextStyle(
+                fontSize: 14,
+                color: kDebugMode ? Colors.orange : Colors.green,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
             const SizedBox(height: 16),
             SwitchListTile(
               title: const Text('Enable Wake Word Detection'),
-              subtitle:
-                  const Text('Detect wake words like "Computer" or "Alexa"'),
+              subtitle: const Text(
+                  'Detect wake word "Okay Glass" to trigger actions while looking at the Dashboard.'),
               value: _isEnabled,
               onChanged: (bool value) {
-                if (value && _accessKeyController.text.trim().isEmpty) {
+                if (value && currentAccessKey.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Please enter an access key first'),
+                    SnackBar(
+                      content: Text(
+                          'Please enter an access key for ${kDebugMode ? 'debug' : 'release'} mode first'),
                       backgroundColor: Colors.orange,
                     ),
                   );
@@ -93,13 +120,37 @@ class WakeWordSettingsPageState extends State<WakeWordSettingsPage> {
             ),
             const SizedBox(height: 16),
             TextField(
-              controller: _accessKeyController,
+              controller: _debugAccessKeyController,
               decoration: InputDecoration(
-                labelText: 'Porcupine Access Key *',
-                hintText: 'Enter your Porcupine access key (required)',
+                labelText: 'Debug Mode Access Key',
+                hintText: 'Enter your Porcupine access key for debug builds',
                 border: const OutlineInputBorder(),
-                errorText: _accessKeyController.text.trim().isEmpty
-                    ? 'Access key is required'
+                prefixIcon: Icon(Icons.bug_report, color: Colors.orange),
+                errorText: kDebugMode &&
+                        _debugAccessKeyController.text.trim().isEmpty &&
+                        _isEnabled
+                    ? 'Access key is required for debug mode'
+                    : null,
+              ),
+              maxLines: 2,
+              onChanged: (value) {
+                setState(() {
+                  // Refresh UI to update error text
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _releaseAccessKeyController,
+              decoration: InputDecoration(
+                labelText: 'Release Mode Access Key',
+                hintText: 'Enter your Porcupine access key for release builds',
+                border: const OutlineInputBorder(),
+                prefixIcon: Icon(Icons.rocket_launch, color: Colors.green),
+                errorText: !kDebugMode &&
+                        _releaseAccessKeyController.text.trim().isEmpty &&
+                        _isEnabled
+                    ? 'Access key is required for release mode'
                     : null,
               ),
               maxLines: 2,
@@ -130,12 +181,12 @@ class WakeWordSettingsPageState extends State<WakeWordSettingsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'About Wake Word Detection',
+                      'About Separate Access Keys',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Wake word detection allows your device to listen for specific trigger words like "Computer" or "Alexa" to activate voice commands. This feature uses Porcupine by Picovoice.',
+                      'As Picovoice does not see an app in release and debug mode as the same app, separate access keys are required for each mode. While this is technically not okay, there is no way around it at the moment.',
                     ),
                     const SizedBox(height: 8),
                     const Text(
