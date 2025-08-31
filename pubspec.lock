@@ -580,6 +580,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.2"
+  flutter_media_controller:
+    dependency: "direct main"
+    description:
+      name: flutter_media_controller
+      sha256: fb795a133127ef0141cb8e35957a4b0a17b58a5650b68d6f8664682f23003b32
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.3"
   flutter_native_splash:
     dependency: "direct main"
     description:
@@ -1447,10 +1455,10 @@ packages:
     dependency: "direct main"
     description:
       name: whisper_ggml
-      sha256: "951612d112cbc62daea30eb09d8476098f9ece45ae152a42ca004e08d4e672f8"
+      sha256: "71c2b5bf69b2b05f2f766b8e862111dcbb4b9e5ae844b7df6945c6584eb24ebd"
       url: "https://pub.dev"
     source: hosted
-    version: "1.5.0"
+    version: "1.7.0"
   win32:
     dependency: transitive
     description:
