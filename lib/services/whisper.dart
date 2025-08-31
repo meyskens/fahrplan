@@ -17,6 +17,7 @@ abstract class WhisperService {
     final prefs = await SharedPreferences.getInstance();
     final mode = prefs.getString('whisper_mode') ?? 'local';
     if (mode == "remote") {
+      print("Using remote whisper service");
       return WhisperRemoteService();
     }
 
@@ -439,6 +440,7 @@ class WhisperRemoteService implements WhisperService {
     return text;
   }
 
+  @override
   Future<void> transcribeLive(
       Stream<Uint8List> voiceData, StreamController<String> out) async {
     await init();
