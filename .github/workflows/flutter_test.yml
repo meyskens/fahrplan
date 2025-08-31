@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: registry.gitlab.com/theonewiththebraid/flutter-dockerimages:3.27.0-android-x86_64
+      image: registry.gitlab.com/polycule_client/flutter-dockerimages:3.35.0-android-x86_64
 
     steps:
       - name: Checkout repository
