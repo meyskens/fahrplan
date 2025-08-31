@@ -365,20 +365,20 @@ class BluetoothManager {
   }
 
   Future<void> sendText(String text,
-      {Duration delay = const Duration(seconds: 5)}) async {
+      {Duration delay = const Duration(seconds: 5),
+      bool clearOnComplete = true}) async {
     if (!isConnected) {
       debugPrint('Not connected to glasses');
       return;
     }
 
     if (text.trim().isEmpty) {
-      // Send exit command for empty text
-      await sendCommandToGlasses([0x18]);
+      await clearScreen();
       return;
     }
 
     List<List<int>> chunks = _createTextWallChunks(text);
-    await _sendChunks(chunks);
+    await _sendChunks(chunks, delay, clearOnComplete);
   }
 
   static const int _TEXT_COMMAND = 0x4E;
@@ -401,57 +401,63 @@ class BluetoothManager {
     List<String> lines = _splitIntoLines(text, effectiveWidth);
 
     // Calculate total pages (hardcoded to 1 for now)
-    int totalPages = 1;
+    //int totalPages = 1;
+    int totalPages =
+        (lines.length / _LINES_PER_SCREEN).ceil(); // 5 lines per page
+
+    print("Total pages: $totalPages");
 
     List<List<int>> allChunks = [];
 
-    // Process the single page
-    int page = 0;
+    for (int i = 0; i < totalPages; i++) {
+      // Process the single page
+      int page = i;
 
-    // Get lines for current page
-    int startLine = page * _LINES_PER_SCREEN;
-    int endLine = (startLine + _LINES_PER_SCREEN).clamp(0, lines.length);
-    List<String> pageLines = lines.sublist(startLine, endLine);
+      // Get lines for current page
+      int startLine = page * _LINES_PER_SCREEN;
+      int endLine = (startLine + _LINES_PER_SCREEN).clamp(0, lines.length);
+      List<String> pageLines = lines.sublist(startLine, endLine);
 
-    // Combine lines for this page with proper indentation
-    StringBuffer pageText = StringBuffer();
+      // Combine lines for this page with proper indentation
+      StringBuffer pageText = StringBuffer();
 
-    for (String line in pageLines) {
-      // Add the exact number of spaces for indentation
-      String indentation = " " * margin;
-      pageText.write(indentation + line + "\n");
+      for (String line in pageLines) {
+        // Add the exact number of spaces for indentation
+        String indentation = " " * margin;
+        pageText.write(indentation + line + "\n");
+      }
+
+      List<int> textBytes = pageText.toString().codeUnits;
+      int totalChunks = (textBytes.length / _MAX_CHUNK_SIZE).ceil();
+
+      // Create chunks for this page
+      for (int i = 0; i < totalChunks; i++) {
+        int start = i * _MAX_CHUNK_SIZE;
+        int end = (start + _MAX_CHUNK_SIZE).clamp(0, textBytes.length);
+        List<int> payloadChunk = textBytes.sublist(start, end);
+
+        // Create header with protocol specifications
+        int screenStatus = 0x71; // New content (0x01) + Text Show (0x70)
+        List<int> header = [
+          _TEXT_COMMAND, // Command type
+          _textSeqNum, // Sequence number
+          totalChunks, // Total packages
+          i, // Current package number
+          screenStatus, // Screen status
+          0x00, // new_char_pos0 (high)
+          0x00, // new_char_pos1 (low)
+          page, // Current page number
+          totalPages // Max page number
+        ];
+
+        // Combine header and payload
+        List<int> chunk = [...header, ...payloadChunk];
+        allChunks.add(chunk);
+      }
+
+      // Increment sequence number for next page
+      _textSeqNum = (_textSeqNum + 1) % 256;
     }
-
-    List<int> textBytes = pageText.toString().codeUnits;
-    int totalChunks = (textBytes.length / _MAX_CHUNK_SIZE).ceil();
-
-    // Create chunks for this page
-    for (int i = 0; i < totalChunks; i++) {
-      int start = i * _MAX_CHUNK_SIZE;
-      int end = (start + _MAX_CHUNK_SIZE).clamp(0, textBytes.length);
-      List<int> payloadChunk = textBytes.sublist(start, end);
-
-      // Create header with protocol specifications
-      int screenStatus = 0x71; // New content (0x01) + Text Show (0x70)
-      List<int> header = [
-        _TEXT_COMMAND, // Command type
-        _textSeqNum, // Sequence number
-        totalChunks, // Total packages
-        i, // Current package number
-        screenStatus, // Screen status
-        0x00, // new_char_pos0 (high)
-        0x00, // new_char_pos1 (low)
-        page, // Current page number
-        totalPages // Max page number
-      ];
-
-      // Combine header and payload
-      List<int> chunk = [...header, ...payloadChunk];
-      allChunks.add(chunk);
-    }
-
-    // Increment sequence number for next page
-    _textSeqNum = (_textSeqNum + 1) % 256;
 
     return allChunks;
   }
@@ -555,12 +561,15 @@ class BluetoothManager {
     return _calculateTextWidth(text.substring(start, end));
   }
 
-  Future<void> _sendChunks(List<List<int>> chunks) async {
+  Future<void> _sendChunks(
+      List<List<int>> chunks, Duration delay, bool clearOnComplete) async {
     // Send each chunk with a delay between sends
     for (List<int> chunk in chunks) {
       await sendCommandToGlasses(chunk);
-      await Future.delayed(
-          Duration(milliseconds: 5)); // Small delay between chunks
+      await Future.delayed(delay);
+    }
+    if (clearOnComplete) {
+      clearScreen();
     }
   }
 
@@ -767,5 +776,9 @@ class BluetoothManager {
     // for an unknown issue the microphone will not close when sent to the left side
     // to work around this we send the command to the right side only
     await rightGlass!.sendData([Commands.OPEN_MIC, subCommand]);
+  }
+
+  Future<void> clearScreen() async {
+    await sendCommandToGlasses([0x18]);
   }
 }

@@ -3,16 +3,15 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:fahrplan/models/fahrplan/checklist.dart';
 import 'package:fahrplan/models/fahrplan/widgets/homassistant.dart';
 import 'package:fahrplan/models/g1/glass.dart';
 import 'package:fahrplan/models/g1/commands.dart';
 import 'package:fahrplan/models/g1/voice_note.dart';
-import 'package:fahrplan/models/voice/voice_commands.dart';
 import 'package:fahrplan/services/bluetooth_manager.dart';
 import 'package:fahrplan/services/whisper.dart';
 import 'package:fahrplan/utils/lc3.dart';
 import 'package:fahrplan/utils/wakeword_settings.dart';
+import 'package:fahrplan/voice/voicecontrol.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mutex/mutex.dart';
 import 'package:path_provider/path_provider.dart';
@@ -30,43 +29,6 @@ class BluetoothReciever {
   final voiceCollectorAI = VoiceDataCollector();
   final voiceCollectorNote = VoiceDataCollector();
   final voiceCollectorWakeWord = VoiceDataCollector(detectWakeWord: true);
-
-  final rightVoiceCommands = VoiceCommandHelper(commands: [
-    VoiceCommand(
-        command: "open checklist",
-        phrases: [
-          "checklist",
-          "check list",
-          "open checklist",
-          "open check list"
-        ],
-        fn: (String listName) {
-          final list = FahrplanChecklist.displayChecklistFor(listName);
-          final bt = BluetoothManager();
-          if (list != null) {
-            bt.sync();
-          } else {
-            bt.sendText('No checklist found for "$listName"');
-          }
-        }),
-    VoiceCommand(
-        command: "close checklist",
-        phrases: [
-          "close checklist",
-          "close check list",
-          "closed checklist",
-          "closed check list"
-        ],
-        fn: (String listName) {
-          final list = FahrplanChecklist.hideChecklistFor(listName);
-          final bt = BluetoothManager();
-          if (list != null) {
-            bt.sync();
-          } else {
-            bt.sendText('No checklist found for "$listName"');
-          }
-        })
-  ]);
 
   int _syncId = 0;
 
@@ -294,7 +256,7 @@ class BluetoothReciever {
       debugPrint(
           '[$side] Transcription took: ${endTime.difference(startTime).inSeconds} seconds');
       try {
-        rightVoiceCommands.parseCommand(transcription);
+        Voicecontrol().launch(transcription);
       } catch (e) {
         bt.sendText(e.toString());
       }
@@ -403,7 +365,7 @@ class VoiceDataCollector {
 
       await wavProcessor.processFile(File(wavPath), (detected) {
         if (detected) {
-          print("Wake word detected!");
+          Voicecontrol().startVoiceControl();
         }
       });
 
@@ -512,9 +474,7 @@ class WavToPorcupine {
 
       //debugPrint('Porcupine result: $result');
       if (result >= 0) {
-        final bt = BluetoothManager();
-        debugPrint("Wake word detected: $result");
-        bt.sendText("Wake word detected");
+        onWakeWord(true);
         break;
       }
     }
