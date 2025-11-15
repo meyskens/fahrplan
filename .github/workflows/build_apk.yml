@@ -46,52 +46,6 @@ jobs:
         with:
           name: app-release.apk
           path: build/app/outputs/flutter-apk/app-release.apk
-  release-fdroid:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-      - name: Download APK
-        uses: actions/download-artifact@v4
-        with:
-          name: app-release.apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-      
-      - name: setup keystore
-        run: echo "$KEY_BASE64" | base64 -d > android/app/keystore.jks
-        env:
-          KEY_BASE64: ${{ secrets.KEY_BASE64 }}
-      
-      - name: setup key.properties
-        run: echo "$KEY_PROPERTIES" > android/key.properties
-        env:
-          KEY_PROPERTIES: ${{ secrets.KEY_PROPERTIES }}
-      
-      - name: setup F-Droid
-        run: |
-          apt-get update && apt-get -qy install fdroidserver wget curl jq --no-install-recommends || true
-          cd fdroid
-          echo "keypass=\"${FDROID_NIGHTLY_KEY_PASS}\"" >> config.nightly.py
-          echo "keystorepass=\"${FDROID_NIGHTLY_KEY_STORE_PASS}\"" >> config.nightly.py
-          echo "repo_keyalias=\"${FDROID_NIGHTLY_KEY_ALIAS}\"" >> config.nightly.py
-          chmod 600 config.nightly.py keystore.jks
-          cp ../app-release.apk repo/fahrplan-latest.apk
-          cp config.nightly.py config.py
-          cd ..
-      - name: Build F-Droid
-        run: |
-          cd fdroid
-          fdroid update --rename-apks
-          mkdir /fdroid && fdroid deploy
-          rm -rf /fdroid/archive
-          cd .. && mv -v /fdroid repo/nightly
-          rm -rf /fdroid fdroid/repo
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: fdroid/repo/nightly
   release:
     needs: build
     runs-on: ubuntu-latest
