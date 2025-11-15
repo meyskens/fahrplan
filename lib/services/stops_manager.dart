@@ -18,6 +18,7 @@ class StopsManager {
   StopsManager._internal();
 
   List<Timer> timers = [];
+  FahrplanStopItem? currentlyTriggeringStop;
 
   void reload() async {
     cancelTimers();
@@ -59,6 +60,7 @@ class StopsManager {
     if (!await _isStopStillInDatabase(item)) {
       return;
     }
+    currentlyTriggeringStop = item;
     final bl = BluetoothManager();
     if (bl.isConnected) {
       bl.sendText(item.title, delay: const Duration(seconds: 10));

@@ -31,4 +31,52 @@ class FahrplanStopItem {
       minute: time.toLocal().minute,
     );
   }
+
+  // Static helper methods for voice commands
+  static Future<List<String>> getAllStopTitles() async {
+    final box = Hive.lazyBox<FahrplanStopItem>('fahrplanStopBox');
+    final List<String> titles = [];
+    for (int i = 0; i < box.length; i++) {
+      final item = await box.getAt(i);
+      if (item != null) {
+        titles.add(item.title);
+      }
+    }
+    return titles;
+  }
+
+  static Future<FahrplanStopItem?> findStopByTitle(String title) async {
+    final box = Hive.lazyBox<FahrplanStopItem>('fahrplanStopBox');
+    for (int i = 0; i < box.length; i++) {
+      final item = await box.getAt(i);
+      if (item != null && item.title.toLowerCase() == title.toLowerCase()) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  static Future<bool> deleteStopByTitle(String title) async {
+    final box = Hive.lazyBox<FahrplanStopItem>('fahrplanStopBox');
+    for (int i = 0; i < box.length; i++) {
+      final item = await box.getAt(i);
+      if (item != null && item.title.toLowerCase() == title.toLowerCase()) {
+        await box.deleteAt(i);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static Future<bool> deleteStopByUuid(String uuid) async {
+    final box = Hive.lazyBox<FahrplanStopItem>('fahrplanStopBox');
+    for (int i = 0; i < box.length; i++) {
+      final item = await box.getAt(i);
+      if (item != null && item.uuid == uuid) {
+        await box.deleteAt(i);
+        return true;
+      }
+    }
+    return false;
+  }
 }
