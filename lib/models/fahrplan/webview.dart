@@ -86,6 +86,11 @@ class FahrplanWebView extends FahrplanWidget {
     return 2; // Same priority as checklists
   }
 
+  static List<String> getAllWebViewNames() {
+    final box = Hive.box<FahrplanWebView>('fahrplanWebViewBox');
+    return box.values.map((wv) => wv.name).toList();
+  }
+
   static int _getBestMatchIndex(String name) {
     final box = Hive.box<FahrplanWebView>('fahrplanWebViewBox');
     final allWebViews = box.values.toList();
