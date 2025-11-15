@@ -23,7 +23,7 @@ class PlayCommand extends VoiceCommand {
   String get command => "Play music";
 
   @override
-  List<String> get triggerPhrases => ["play music", "play"];
+  List<String> get triggerPhrases => ["play music"];
 
   @override
   Future<void> execute(String inputText) async {
@@ -41,7 +41,7 @@ class PauseCommand extends VoiceCommand {
   String get command => "Pause music";
 
   @override
-  List<String> get triggerPhrases => ["pause music", "pause"];
+  List<String> get triggerPhrases => ["pause music"];
 
   @override
   Future<void> execute(String inputText) async {
@@ -96,7 +96,8 @@ class WhatIsPlayingCommand extends VoiceCommand {
   String get command => "What is playing";
 
   @override
-  List<String> get triggerPhrases => ["what is playing", "what's playing"];
+  List<String> get triggerPhrases =>
+      ["what is playing", "what's playing", "what song is this"];
 
   @override
   Future<void> execute(String inputText) async {

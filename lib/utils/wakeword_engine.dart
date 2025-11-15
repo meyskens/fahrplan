@@ -178,6 +178,7 @@ class SnowboyDetector implements WakeWordDetector {
       _snowboy!.hotwordHandler = () {
         debugPrint("Snowboy: Wake word detected!");
         _detectionResult = true;
+        _pastSamples.clear(); // Clear past samples after detection
         onWakeWordDetected?.call();
       };
 
