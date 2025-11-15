@@ -178,10 +178,14 @@ class Voicecontrol {
             tokenSetScore
           ].reduce((a, b) => a > b ? a : b);
 
-          if (maxScore > 60 &&
-              (bestMatch == null || maxScore > bestMatch.score)) {
-            bestMatch =
-                CommandMatch(command: command, phrase: phrase, score: maxScore);
+          if (maxScore > 60) {
+            if (bestMatch == null ||
+                maxScore > bestMatch.score ||
+                (maxScore == bestMatch.score &&
+                    phrase.length > bestMatch.phrase.length)) {
+              bestMatch = CommandMatch(
+                  command: command, phrase: phrase, score: maxScore);
+            }
           }
         }
       }
