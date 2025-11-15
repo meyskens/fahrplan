@@ -10,18 +10,30 @@ class WakeWordSettingsPage extends StatefulWidget {
 }
 
 class WakeWordSettingsPageState extends State<WakeWordSettingsPage> {
+  // Text controllers
   final _debugAccessKeyController = TextEditingController();
   final _releaseAccessKeyController = TextEditingController();
+
+  // State variables
   bool _isEnabled = false;
   WakeWordEngine _selectedEngine = WakeWordEngine.snowboy;
   String _selectedSnowboyModel = 'snowboy.umdl';
 
+  // Lifecycle methods
   @override
   void initState() {
     super.initState();
     _loadSettings();
   }
 
+  @override
+  void dispose() {
+    _debugAccessKeyController.dispose();
+    _releaseAccessKeyController.dispose();
+    super.dispose();
+  }
+
+  // Load settings
   Future<void> _loadSettings() async {
     final debugAccessKey = await WakeWordSettings.getDebugAccessKey();
     final releaseAccessKey = await WakeWordSettings.getReleaseAccessKey();
@@ -39,12 +51,13 @@ class WakeWordSettingsPageState extends State<WakeWordSettingsPage> {
     });
   }
 
+  // Save settings
   Future<void> _saveSettings() async {
     final currentAccessKey = kDebugMode
         ? _debugAccessKeyController.text.trim()
         : _releaseAccessKeyController.text.trim();
 
-    // Only require access key for Porcupine engine
+    // Validate Porcupine requirements
     if (_isEnabled &&
         _selectedEngine == WakeWordEngine.porcupine &&
         currentAccessKey.isEmpty) {
@@ -58,6 +71,7 @@ class WakeWordSettingsPageState extends State<WakeWordSettingsPage> {
       return;
     }
 
+    // Save all settings
     await WakeWordSettings.setDebugAccessKey(
         _debugAccessKeyController.text.trim());
     await WakeWordSettings.setReleaseAccessKey(
@@ -73,13 +87,7 @@ class WakeWordSettingsPageState extends State<WakeWordSettingsPage> {
     }
   }
 
-  @override
-  void dispose() {
-    _debugAccessKeyController.dispose();
-    _releaseAccessKeyController.dispose();
-    super.dispose();
-  }
-
+  // UI Build
   @override
   Widget build(BuildContext context) {
     final currentAccessKey = kDebugMode
@@ -108,6 +116,32 @@ class WakeWordSettingsPageState extends State<WakeWordSettingsPage> {
               ),
             ),
             const SizedBox(height: 16),
+            // Enable/Disable toggle
+            SwitchListTile(
+              title: const Text('Enable Wake Word Detection'),
+              subtitle: const Text(
+                  'Detect wake word "Okay Glass" to trigger actions while looking at the Dashboard.'),
+              value: _isEnabled,
+              onChanged: (bool value) {
+                if (value &&
+                    _selectedEngine == WakeWordEngine.porcupine &&
+                    currentAccessKey.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'Please enter a Porcupine access key for ${kDebugMode ? 'debug' : 'release'} mode first'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+                setState(() {
+                  _isEnabled = value;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            // Engine selection
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -152,31 +186,57 @@ class WakeWordSettingsPageState extends State<WakeWordSettingsPage> {
               ),
             ),
             const SizedBox(height: 16),
-            SwitchListTile(
-              title: const Text('Enable Wake Word Detection'),
-              subtitle: const Text(
-                  'Detect wake word "Okay Glass" to trigger actions while looking at the Dashboard.'),
-              value: _isEnabled,
-              onChanged: (bool value) {
-                if (value &&
-                    _selectedEngine == WakeWordEngine.porcupine &&
-                    currentAccessKey.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                          'Please enter a Porcupine access key for ${kDebugMode ? 'debug' : 'release'} mode first'),
-                      backgroundColor: Colors.orange,
-                    ),
-                  );
-                  return;
-                }
-                setState(() {
-                  _isEnabled = value;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            // Only show Porcupine settings when Porcupine is selected
+            // Engine-specific settings
+            if (_selectedEngine == WakeWordEngine.snowboy) ...[
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Snowboy Model Selection',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: _selectedSnowboyModel,
+                        decoration: const InputDecoration(
+                          labelText: 'Wake Word Model',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.model_training),
+                        ),
+                        items: WakeWordSettings.snowboyModels.entries
+                            .map((entry) => DropdownMenuItem<String>(
+                                  value: entry.key,
+                                  child: Text(entry.value),
+                                ))
+                            .toList(),
+                        onChanged: (String? newValue) {
+                          if (newValue != null) {
+                            setState(() {
+                              _selectedSnowboyModel = newValue;
+                            });
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'About Snowboy',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Snowboy is an open-source wake word detection engine. '
+                        'It does not require an API key and works completely offline. '
+                        'Multiple pre-trained models are available to choose from.',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             if (_selectedEngine == WakeWordEngine.porcupine) ...[
               const Text(
                 'Porcupine Settings',
@@ -258,61 +318,11 @@ class WakeWordSettingsPageState extends State<WakeWordSettingsPage> {
               ),
             ],
             const SizedBox(height: 24),
+            // Save button
             ElevatedButton(
               onPressed: _saveSettings,
               child: const Text('Save Settings'),
             ),
-            const SizedBox(height: 16),
-            if (_selectedEngine == WakeWordEngine.snowboy) ...[
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Snowboy Model Selection',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        value: _selectedSnowboyModel,
-                        decoration: const InputDecoration(
-                          labelText: 'Wake Word Model',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.model_training),
-                        ),
-                        items: WakeWordSettings.snowboyModels.entries
-                            .map((entry) => DropdownMenuItem<String>(
-                                  value: entry.key,
-                                  child: Text(entry.value),
-                                ))
-                            .toList(),
-                        onChanged: (String? newValue) {
-                          if (newValue != null) {
-                            setState(() {
-                              _selectedSnowboyModel = newValue;
-                            });
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'About Snowboy',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Snowboy is an open-source wake word detection engine. '
-                        'It does not require an API key and works completely offline. '
-                        'Multiple pre-trained models are available to choose from.',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),
