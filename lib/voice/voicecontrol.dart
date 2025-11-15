@@ -9,6 +9,7 @@ import 'package:fahrplan/utils/lc3.dart';
 import 'package:fahrplan/voice/module.dart';
 import 'package:fahrplan/voice/modules/checklist.dart';
 import 'package:fahrplan/voice/modules/music.dart';
+import 'package:fahrplan/voice/modules/waypoint.dart';
 import 'package:fahrplan/voice/modules/webview.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fuzzywuzzy/fuzzywuzzy.dart';
@@ -34,6 +35,7 @@ class Voicecontrol {
   List<VoiceModule> modules = [
     Checklist(),
     WebView(),
+    Waypoint(),
     Music(),
   ];
 
@@ -234,7 +236,71 @@ class Voicecontrol {
     }
   }
 
-  String _prepareTranscript(String transcription) {
+  static Future<int> findBestMatch(
+      String transcription, List<String> availableCommands) async {
+    final prefs = await SharedPreferences.getInstance();
+    final mode = prefs.getString('voice_command_mode') ?? 'fuzzy';
+
+    if (mode == 'llm') {
+      final matchedCommand =
+          await LLMService.matchCommand(transcription, availableCommands);
+
+      if (matchedCommand != null &&
+          availableCommands.contains(matchedCommand)) {
+        debugPrint('LLM matched: $matchedCommand');
+        return availableCommands.indexOf(matchedCommand);
+      } else {
+        debugPrint('LLM found no match, falling back to fuzzy matching');
+        // Fall back to fuzzy matching if LLM fails
+        return _findBestMatch(transcription, availableCommands);
+      }
+    } else {
+      // Use fuzzy matching
+      return _findBestMatch(transcription, availableCommands);
+    }
+  }
+
+  static int _findBestMatch(
+      String transcription, List<String> availableCommands) {
+    final cleanTranscription = _prepareTranscript(transcription);
+
+    String? bestMatch;
+    int bestScore = 0;
+
+    for (String phrase in availableCommands) {
+      final cleanPhrase = phrase.toLowerCase();
+
+      // Use multiple fuzzywuzzy algorithms and take the highest score
+      final ratioScore = ratio(cleanTranscription, cleanPhrase);
+      final partialScore = partialRatio(cleanTranscription, cleanPhrase);
+      final tokenSortScore = tokenSortRatio(cleanTranscription, cleanPhrase);
+      final tokenSetScore = tokenSetRatio(cleanTranscription, cleanPhrase);
+
+      // Take the highest score from all algorithms
+      final maxScore = [ratioScore, partialScore, tokenSortScore, tokenSetScore]
+          .reduce((a, b) => a > b ? a : b);
+
+      if (maxScore > 60) {
+        if (bestMatch == null ||
+            maxScore > bestScore ||
+            (maxScore == bestScore && phrase.length > bestMatch.length)) {
+          bestMatch = phrase;
+          bestScore = maxScore;
+        }
+      }
+    }
+
+    if (bestMatch != null) {
+      debugPrint(
+          'Best fuzzy match found for $transcription: "$bestMatch" with score: $bestScore');
+    } else {
+      debugPrint('No suitable command match found for: "$cleanTranscription"');
+    }
+
+    return availableCommands.indexOf(bestMatch ?? "");
+  }
+
+  static String _prepareTranscript(String transcription) {
     transcription = transcription.replaceAll(RegExp(r'\[.*?\]'), '');
     transcription = transcription.replaceAll(RegExp(r' {2,}'), ' ');
     return transcription.toLowerCase().trim();

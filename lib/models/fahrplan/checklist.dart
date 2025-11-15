@@ -26,6 +26,11 @@ class FahrplanChecklist extends FahrplanWidget {
     return 1;
   }
 
+  static List<String> getAllChecklistNames() {
+    final box = Hive.box<FahrplanChecklist>('fahrplanChecklistBox');
+    return box.values.map((cl) => cl.name).toList();
+  }
+
   static int _getBestMatchIndex(String name) {
     final box = Hive.box<FahrplanChecklist>('fahrplanChecklistBox');
     final allLists = box.values.toList();

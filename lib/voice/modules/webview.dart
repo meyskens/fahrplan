@@ -1,6 +1,7 @@
 import 'package:fahrplan/models/fahrplan/webview.dart';
 import 'package:fahrplan/services/bluetooth_manager.dart';
 import 'package:fahrplan/voice/module.dart';
+import 'package:fahrplan/voice/voicecontrol.dart';
 
 String _removeTriggers(String transcription, List<String> triggers) {
   for (var trigger in triggers) {
@@ -40,7 +41,16 @@ class OpenWebView extends VoiceCommand {
 
   @override
   Future<void> execute(String inputText) async {
-    final webViewName = _removeTriggers(inputText, triggerPhrases);
+    final webViews = FahrplanWebView.getAllWebViewNames();
+    final bestMatch = await Voicecontrol.findBestMatch(
+        inputText, webViews.map((e) => "close webview $e").toList());
+
+    String webViewName = "";
+    if (bestMatch > -1) {
+      webViewName = webViews[bestMatch];
+    } else {
+      webViewName = _removeTriggers(webViews[bestMatch], triggerPhrases);
+    }
     final webView = FahrplanWebView.displayWebViewFor(webViewName);
 
     final bt = BluetoothManager();
@@ -70,7 +80,16 @@ class CloseWebView extends VoiceCommand {
 
   @override
   Future<void> execute(String inputText) async {
-    final webViewName = _removeTriggers(inputText, triggerPhrases);
+    final webViews = FahrplanWebView.getAllWebViewNames();
+    final bestMatch = await Voicecontrol.findBestMatch(
+        inputText, webViews.map((e) => "close webview $e").toList());
+
+    String webViewName = "";
+    if (bestMatch > -1) {
+      webViewName = webViews[bestMatch];
+    } else {
+      webViewName = _removeTriggers(webViews[bestMatch], triggerPhrases);
+    }
     final webView = FahrplanWebView.hideWebViewFor(webViewName);
 
     final bt = BluetoothManager();
