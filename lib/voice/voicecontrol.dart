@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:fahrplan/services/bluetooth_manager.dart';
 import 'package:fahrplan/services/bluetooth_reciever.dart';
+import 'package:fahrplan/services/llm_service.dart';
 import 'package:fahrplan/services/whisper.dart';
 import 'package:fahrplan/utils/lc3.dart';
 import 'package:fahrplan/voice/module.dart';
@@ -11,6 +12,7 @@ import 'package:fahrplan/voice/modules/music.dart';
 import 'package:fahrplan/voice/modules/webview.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fuzzywuzzy/fuzzywuzzy.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CommandMatch {
   final VoiceCommand command;
@@ -102,7 +104,7 @@ class Voicecontrol {
         voiceTimer?.cancel();
 
         voiceTimer = Timer(Duration(milliseconds: 1300), () async {
-          final matchedCommand = _findBestCommand(lastTranscription);
+          final matchedCommand = await _findBestCommandAsync(lastTranscription);
           if (matchedCommand != null) {
             isListening = false;
             timeoutTimer?.cancel();
@@ -128,7 +130,7 @@ class Voicecontrol {
   }
 
   Future<void> launch(String transcription) async {
-    final matchedCommand = _findBestCommand(transcription);
+    final matchedCommand = await _findBestCommandAsync(transcription);
     if (matchedCommand == null) {
       await bt.sendText('Command "$transcription" not recognised');
     }
@@ -199,6 +201,37 @@ class Voicecontrol {
     }
 
     return bestMatch?.command;
+  }
+
+  Future<VoiceCommand?> _findBestCommandAsync(String transcription) async {
+    final prefs = await SharedPreferences.getInstance();
+    final mode = prefs.getString('voice_command_mode') ?? 'fuzzy';
+
+    if (mode == 'llm') {
+      // Build list of all available commands with their trigger phrases
+      final commandMap = <String, VoiceCommand>{};
+      for (VoiceModule module in modules) {
+        for (VoiceCommand command in module.commands) {
+          commandMap[command.command] = command;
+        }
+      }
+
+      final availableCommands = commandMap.keys.toList();
+      final matchedCommand =
+          await LLMService.matchCommand(transcription, availableCommands);
+
+      if (matchedCommand != null && commandMap.containsKey(matchedCommand)) {
+        debugPrint('LLM matched: $matchedCommand');
+        return commandMap[matchedCommand];
+      } else {
+        debugPrint('LLM found no match, falling back to fuzzy matching');
+        // Fall back to fuzzy matching if LLM fails
+        return _findBestCommand(transcription);
+      }
+    } else {
+      // Use fuzzy matching
+      return _findBestCommand(transcription);
+    }
   }
 
   String _prepareTranscript(String transcription) {
