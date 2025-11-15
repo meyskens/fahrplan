@@ -664,8 +664,12 @@ class BluetoothManager {
   }
 
   void _handleAndroidNotification(ServiceNotificationEvent notification) async {
+    if (notification.title == null && notification.content == null) {
+      return;
+    }
     debugPrint(
         'Received notification: ${notification.toString()} from ${notification.packageName}');
+
     if (isConnected) {
       NCSNotification ncsNotification = NCSNotification(
         msgId: (notification.id ?? 1) + DateTime.now().millisecondsSinceEpoch,
