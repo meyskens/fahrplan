@@ -148,7 +148,7 @@ $commandList
       temperature: 0.1,
       maxTokens: 1000,
     );
-Other
+
     if (content != null && content.isNotEmpty) {
       debugPrint('LLM summary: $content');
       return content;
