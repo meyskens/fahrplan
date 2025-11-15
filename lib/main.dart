@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
-import 'package:c/audio_service.dart';
+import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:fahrplan/models/fahrplan/calendar.dart';
 import 'package:fahrplan/models/fahrplan/checklist.dart';
