@@ -1,6 +1,7 @@
 import 'package:fahrplan/models/fahrplan/checklist.dart';
 import 'package:fahrplan/services/bluetooth_manager.dart';
 import 'package:fahrplan/voice/module.dart';
+import 'package:fahrplan/voice/voicecontrol.dart';
 
 String _removeTriggers(String transcription, List<String> triggers) {
   for (var trigger in triggers) {
@@ -40,7 +41,16 @@ class OpenChecklist extends VoiceCommand {
 
   @override
   Future<void> execute(String inputText) async {
-    final listName = _removeTriggers(inputText, triggerPhrases);
+    final allLists = FahrplanChecklist.getAllChecklistNames();
+    final bestMatch = await Voicecontrol.findBestMatch(
+        inputText, allLists.map((e) => "open checklist $e").toList());
+
+    String listName = "";
+    if (bestMatch > -1) {
+      listName = allLists[bestMatch];
+    } else {
+      listName = _removeTriggers(inputText, triggerPhrases);
+    }
     final list = FahrplanChecklist.displayChecklistFor(listName);
 
     final bt = BluetoothManager();
@@ -68,7 +78,16 @@ class CloseChecklist extends VoiceCommand {
 
   @override
   Future<void> execute(String inputText) async {
-    final listName = _removeTriggers(inputText, triggerPhrases);
+    final allLists = FahrplanChecklist.getAllChecklistNames();
+    final bestMatch = await Voicecontrol.findBestMatch(
+        inputText, allLists.map((e) => "close checklist $e").toList());
+
+    String listName = "";
+    if (bestMatch > -1) {
+      listName = allLists[bestMatch];
+    } else {
+      listName = _removeTriggers(inputText, triggerPhrases);
+    }
     final list = FahrplanChecklist.hideChecklistFor(listName);
 
     final bt = BluetoothManager();
