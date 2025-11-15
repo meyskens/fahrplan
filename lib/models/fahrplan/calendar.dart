@@ -1,6 +1,8 @@
 import 'package:device_calendar/device_calendar.dart';
 import 'package:fahrplan/models/fahrplan/fahrplan_dashboard.dart';
+import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
+import 'package:flutter_native_timezone/flutter_native_timezone.dart';
 
 part 'calendar.g.dart';
 
@@ -24,6 +26,16 @@ class FahrplanCalendarComposer {
     final deviceCal = DeviceCalendarPlugin();
     final fpCals = calendarBox.values.toList();
 
+    Location currentLocation = getLocation('Etc/UTC');
+    String timezone = 'Etc/UTC';
+    try {
+      timezone = await FlutterNativeTimezone.getLocalTimezone();
+    } catch (e) {
+      debugPrint('Could not get the local timezone');
+    }
+    currentLocation = getLocation(timezone);
+    setLocalLocation(currentLocation);
+
     final items = <FahrplanItem>[];
 
     for (var cal in fpCals) {
@@ -34,11 +46,11 @@ class FahrplanCalendarComposer {
       final events = await deviceCal.retrieveEvents(
           cal.id,
           RetrieveEventsParams(
-            startDate: DateTime.now(),
-            endDate: DateTime.now().add(const Duration(days: 1)),
+            startDate: DateTime.now().toLocal(),
+            endDate: DateTime.now().toLocal().add(const Duration(days: 1)),
           ));
 
-      for (var event in events.data ?? []) {
+      for (Event event in events.data ?? []) {
         if (event.start == null) {
           continue;
         }
@@ -48,7 +60,7 @@ class FahrplanCalendarComposer {
 
         final start = event.start!;
         items.add(FahrplanItem(
-          title: event.title,
+          title: event.title ?? 'No Title',
           hour: start.toLocal().hour,
           minute: start.toLocal().minute,
         ));

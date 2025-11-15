@@ -73,6 +73,7 @@ dependencies:
     git:
       url: https://github.com/pavan7parekh/FlutterSnowboy
       ref: 0e9650c83c20fd1a23e03091eef6c02c98949075
+  flutter_native_timezone: ^2.0.0
 
 dev_dependencies:
   flutter_test:
