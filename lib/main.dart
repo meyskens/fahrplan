@@ -8,6 +8,7 @@ import 'package:fahrplan/models/fahrplan/calendar.dart';
 import 'package:fahrplan/models/fahrplan/checklist.dart';
 import 'package:fahrplan/models/fahrplan/daily.dart';
 import 'package:fahrplan/models/fahrplan/stop.dart';
+import 'package:fahrplan/models/fahrplan/webview.dart';
 import 'package:fahrplan/services/bluetooth_manager.dart';
 import 'package:fahrplan/services/stops_manager.dart';
 import 'package:fahrplan/utils/ui_perfs.dart';
@@ -120,6 +121,7 @@ Future<void> _initHive() async {
   Hive.registerAdapter(FahrplanCalendarAdapter());
   Hive.registerAdapter(FahrplanCheckListItemAdapter());
   Hive.registerAdapter(FahrplanChecklistAdapter());
+  Hive.registerAdapter(FahrplanWebViewAdapter());
   await Hive.initFlutter();
 }
 

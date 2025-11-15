@@ -2,6 +2,7 @@ import 'package:fahrplan/models/fahrplan/calendar.dart';
 import 'package:fahrplan/models/fahrplan/checklist.dart';
 import 'package:fahrplan/models/fahrplan/daily.dart';
 import 'package:fahrplan/models/fahrplan/stop.dart';
+import 'package:fahrplan/models/fahrplan/webview.dart';
 import 'package:fahrplan/models/fahrplan/widgets/fahrplan_widget.dart';
 import 'package:fahrplan/models/fahrplan/widgets/traewelling.dart';
 import 'package:fahrplan/models/g1/note.dart';
@@ -49,6 +50,7 @@ class FahrplanDashboard {
     await Hive.openBox<FahrplanDailyItem>('fahrplanDailyBox');
     await Hive.openBox<FahrplanCalendar>('fahrplanCalendarBox');
     await Hive.openBox<FahrplanChecklist>('fahrplanChecklistBox');
+    await Hive.openBox<FahrplanWebView>('fahrplanWebViewBox');
     await Hive.openBox('fahrplanNotificationApps');
     try {
       await Hive.openLazyBox<FahrplanStopItem>('fahrplanStopBox');
@@ -107,6 +109,19 @@ class FahrplanDashboard {
     return widgets;
   }
 
+  List<FahrplanWidget> _getWebViews() {
+    final List<FahrplanWidget> widgets = [];
+    final fahrplanWebViewBox = Hive.box<FahrplanWebView>('fahrplanWebViewBox');
+    final allWebViews = fahrplanWebViewBox.values.toList();
+    for (var webView in allWebViews) {
+      if (webView.isShown) {
+        widgets.add(webView);
+      }
+    }
+
+    return widgets;
+  }
+
   Future<List<Note>> generateDashboardItems() async {
     await _loadItems();
     _sortItemsByTime();
@@ -119,7 +134,8 @@ class FahrplanDashboard {
     final List<Note> widgetNotes = [];
 
     final checklists = _getChecklists();
-    widgets = [...checklists, ...widgets];
+    final webViews = _getWebViews();
+    widgets = [...checklists, ...webViews, ...widgets];
 
     for (var widget in widgets) {
       try {

@@ -8,6 +8,7 @@ import 'package:fahrplan/utils/lc3.dart';
 import 'package:fahrplan/voice/module.dart';
 import 'package:fahrplan/voice/modules/checklist.dart';
 import 'package:fahrplan/voice/modules/music.dart';
+import 'package:fahrplan/voice/modules/webview.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fuzzywuzzy/fuzzywuzzy.dart';
 
@@ -30,6 +31,7 @@ class Voicecontrol {
 
   List<VoiceModule> modules = [
     Checklist(),
+    WebView(),
     Music(),
   ];
 

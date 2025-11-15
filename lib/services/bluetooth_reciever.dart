@@ -354,11 +354,8 @@ class VoiceDataCollector {
         return;
       }
 
-      final detected = await _wakeWordDetector!.processAudioData(wavData);
-
-      if (detected && onWakeWordDetected != null) {
-        onWakeWordDetected!();
-      }
+      // Process audio data - the detector will call onWakeWordDetected if wake word is found
+      await _wakeWordDetector!.processAudioData(wavData);
     } catch (e) {
       debugPrint("Error processing wake word: $e");
     }
