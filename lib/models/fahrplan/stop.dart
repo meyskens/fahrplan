@@ -12,11 +12,14 @@ class FahrplanStopItem {
   DateTime time;
   @HiveField(2)
   late String uuid;
+  @HiveField(3)
+  bool showNotification;
 
   FahrplanStopItem({
     required this.title,
     required this.time,
     String? uuid,
+    this.showNotification = true,
   }) {
     this.uuid = uuid ?? Uuid().v4();
   }

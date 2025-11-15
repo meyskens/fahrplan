@@ -20,19 +20,22 @@ class FahrplanStopItemAdapter extends TypeAdapter<FahrplanStopItem> {
       title: fields[0] as String,
       time: fields[1] as DateTime,
       uuid: fields[2] as String?,
+      showNotification: fields[3] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, FahrplanStopItem obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(4)
       ..writeByte(0)
       ..write(obj.title)
       ..writeByte(1)
       ..write(obj.time)
       ..writeByte(2)
-      ..write(obj.uuid);
+      ..write(obj.uuid)
+      ..writeByte(3)
+      ..write(obj.showNotification);
   }
 
   @override
