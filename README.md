@@ -39,7 +39,7 @@ Voice commands can be triggered by holding the left button (Even AI) or using **
 
 ## Why the G1 specifically?
 
-Simple: they are the only glasses with display that fit my face and are able to ship my prescription. That's it.
+Simple: they are the only glasses with display that fit my face and are able to ship my prescription. And are not bulky or spy on you. That's it.
 
 ## Supported OSes?
 
