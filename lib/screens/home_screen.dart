@@ -2,6 +2,7 @@ import 'package:fahrplan/screens/calendars_screen.dart';
 import 'package:fahrplan/screens/checklist_screen.dart';
 import 'package:fahrplan/screens/fahrplan_daily.dart';
 import 'package:fahrplan/screens/fahrplan_stop.dart';
+import 'package:fahrplan/screens/fahrplan_waypoint.dart';
 import 'package:fahrplan/screens/settings_screen.dart';
 import 'package:fahrplan/screens/transcribe_screen.dart';
 import 'package:fahrplan/screens/webview_screen.dart';
@@ -88,6 +89,27 @@ class _HomePageState extends State<HomePage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => FahrplanStopPage()),
+              );
+            },
+          ),
+          ListTile(
+            title: Row(
+              children: [
+                _ui.trainNerdMode
+                    ? Image(
+                        image: AssetImage('assets/icons/KP.png'),
+                        height: 20,
+                      )
+                    : Icon(Icons.flag),
+                SizedBox(width: 10),
+                Text('Waypoints'),
+              ],
+            ),
+            trailing: Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => FahrplanWaypointPage()),
               );
             },
           ),

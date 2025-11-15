@@ -11,6 +11,11 @@ class LLMService {
     final apiKey = prefs.getString('llm_api_key');
     final model = prefs.getString('llm_model');
 
+    if (apiUrl == null || apiUrl.isEmpty) {
+      debugPrint('LLM API URL not configured');
+      return null;
+    }
+
     if (apiKey == null || apiKey.isEmpty) {
       debugPrint('LLM API key not configured');
       return null;
@@ -33,8 +38,7 @@ $commandList
 ''';
 
       // Use OpenAI API endpoint by default
-      final baseUrl =
-          apiUrl?.isNotEmpty == true ? apiUrl! : 'https://api.openai.com/v1';
+      final baseUrl = apiUrl!;
       final endpoint = baseUrl.endsWith('/chat/completions')
           ? baseUrl
           : '$baseUrl/chat/completions';
@@ -62,7 +66,7 @@ $commandList
                 },
               ],
               'temperature': 0.1,
-              'max_tokens': 50,
+              'max_tokens': 400,
             }),
           )
           .timeout(Duration(seconds: 10));
@@ -109,6 +113,107 @@ $commandList
         }
       } else {
         debugPrint('LLM found no match');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error calling LLM service: $e');
+      return null;
+    }
+  }
+
+  static Future<String?> summaryGen(String transcription) async {
+    final prefs = await SharedPreferences.getInstance();
+    final apiUrl = prefs.getString('llm_api_url');
+    final apiKey = prefs.getString('llm_api_key');
+    final model = prefs.getString('llm_model');
+
+    if (apiUrl == null || apiUrl.isEmpty) {
+      debugPrint('LLM API URL not configured');
+      return null;
+    }
+
+    if (apiKey == null || apiKey.isEmpty) {
+      debugPrint('LLM API key not configured');
+      return null;
+    }
+
+    if (model == null || model.isEmpty) {
+      debugPrint('LLM model not configured');
+      return null;
+    }
+
+    try {
+      final prompt = 'The user said: "$transcription"';
+
+      // Use OpenAI API endpoint by default
+      final baseUrl = apiUrl;
+      final endpoint = baseUrl.endsWith('/chat/completions')
+          ? baseUrl
+          : '$baseUrl/chat/completions';
+
+      debugPrint('Sending LLM request to $endpoint');
+
+      final response = await http
+          .post(
+            Uri.parse(endpoint),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $apiKey',
+            },
+            body: jsonEncode({
+              'model': model,
+              'messages': [
+                {
+                  'role': 'system',
+                  'content':
+                      'You are a summary generator for a waypoint generator. Summarize the user input concisely, limit your output to maximum 20 characters, never more than the input length. Leave out (relative) time and remove the "add waypoint" command trigger. No punctuation.',
+                },
+                {
+                  'role': 'user',
+                  'content': prompt,
+                },
+              ],
+              'temperature': 0.1,
+              'max_tokens': 1000,
+            }),
+          )
+          .timeout(Duration(seconds: 10));
+
+      if (response.statusCode != 200) {
+        debugPrint('LLM API error: ${response.statusCode} - ${response.body}');
+        return null;
+      }
+
+      final jsonResponse = jsonDecode(response.body);
+      String? content;
+
+      // Parse the response - handle different API formats
+      try {
+        if (jsonResponse['choices'] != null &&
+            jsonResponse['choices'].isNotEmpty) {
+          final message = jsonResponse['choices'][0]['message'];
+          if (message != null) {
+            // Handle both string and structured content
+            final messageContent = message['content'];
+            if (messageContent is String) {
+              content = messageContent.trim();
+            } else if (messageContent is List && messageContent.isNotEmpty) {
+              // Handle structured content format
+              content = messageContent[0]['text']?.toString().trim();
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Error parsing LLM response: $e');
+        debugPrint('Response body: ${response.body}');
+        return null;
+      }
+
+      if (content != null && content.isNotEmpty) {
+        debugPrint('LLM summary: $content');
+        return content;
+      } else {
+        debugPrint('LLM returned empty summary');
         return null;
       }
     } catch (e) {

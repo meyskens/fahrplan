@@ -2,6 +2,7 @@ import 'package:fahrplan/models/fahrplan/calendar.dart';
 import 'package:fahrplan/models/fahrplan/checklist.dart';
 import 'package:fahrplan/models/fahrplan/daily.dart';
 import 'package:fahrplan/models/fahrplan/stop.dart';
+import 'package:fahrplan/models/fahrplan/waypoint.dart';
 import 'package:fahrplan/models/fahrplan/webview.dart';
 import 'package:fahrplan/models/fahrplan/widgets/fahrplan_widget.dart';
 import 'package:fahrplan/models/fahrplan/widgets/traewelling.dart';
@@ -14,15 +15,22 @@ class FahrplanItem {
   final String title;
   final int? hour;
   final int? minute;
+  final bool showTime;
+  final bool ignoreTime;
 
   FahrplanItem({
     required this.title,
     this.hour,
     this.minute,
+    this.showTime = true,
+    this.ignoreTime = false,
   });
 
   @override
   String toString() {
+    if (!showTime) {
+      return '${NoteSupportedIcons.CHECKBOX}$title';
+    }
     return '${NoteSupportedIcons.CHECKBOX}${hour?.toString().padLeft(2, '0') ?? ''}:${minute?.toString().padLeft(2, '0') ?? ''} $title';
   }
 }
@@ -48,6 +56,7 @@ class FahrplanDashboard {
     }
 
     await Hive.openBox<FahrplanDailyItem>('fahrplanDailyBox');
+    await Hive.openBox<FahrplanWaypoint>('fahrplanWaypointBox');
     await Hive.openBox<FahrplanCalendar>('fahrplanCalendarBox');
     await Hive.openBox<FahrplanChecklist>('fahrplanChecklistBox');
     await Hive.openBox<FahrplanWebView>('fahrplanWebViewBox');
@@ -74,6 +83,19 @@ class FahrplanDashboard {
 
     final fahrplanDailyBox = Hive.box<FahrplanDailyItem>('fahrplanDailyBox');
     items.addAll(fahrplanDailyBox.values.map((e) => e.toFahrplanItem()));
+
+    final fahrplanWaypointBox =
+        Hive.box<FahrplanWaypoint>('fahrplanWaypointBox');
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    // Show all waypoints that are today or in the past (yesterday and earlier)
+    // Don't show waypoints for tomorrow or future dates yet
+    final relevantWaypoints = fahrplanWaypointBox.values.where((element) {
+      final waypointDate = DateTime(element.startTime.year,
+          element.startTime.month, element.startTime.day);
+      return waypointDate.isBefore(today.add(Duration(days: 1)));
+    }).toList();
+    items.addAll(relevantWaypoints.map((e) => e.toFahrplanItem()));
 
     final fahrplanStopBox = Hive.lazyBox<FahrplanStopItem>('fahrplanStopBox');
     final List<FahrplanStopItem> stops = [];
@@ -188,7 +210,7 @@ class FahrplanDashboard {
       if (fpi.hour != null && fpi.minute != null) {
         final itemTime =
             DateTime(now.year, now.month, now.day, fpi.hour!, fpi.minute!);
-        if (itemTime.isAfter(now)) {
+        if (itemTime.isAfter(now) || fpi.ignoreTime) {
           futureItems.add(fpi);
         }
       }
