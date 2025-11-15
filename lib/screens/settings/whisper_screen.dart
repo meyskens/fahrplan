@@ -47,10 +47,14 @@ class WhisperSettingsPageState extends State<WhisperSettingsPage> {
   String? _selectedModel;
   String? _selectedMode;
   String? _selectedLanguage;
+  bool _useWebSocket = true;
 
   final _apiUrlController = TextEditingController();
   final _apiKeyController = TextEditingController();
   final _remoteModelController = TextEditingController();
+  final _azureSubscriptionKeyController = TextEditingController();
+  final _azureRegionController = TextEditingController();
+  final _azureBridgeServerController = TextEditingController();
 
   @override
   void initState() {
@@ -64,10 +68,17 @@ class WhisperSettingsPageState extends State<WhisperSettingsPage> {
       _selectedModel = prefs.getString('whisper_model') ?? 'base';
       _selectedMode = prefs.getString('whisper_mode') ?? 'local';
       _selectedLanguage = prefs.getString('whisper_language') ?? 'en';
+      _useWebSocket = prefs.getBool('whisper_use_websocket') ?? true;
       _apiUrlController.text = prefs.getString('whisper_api_url') ?? '';
       _apiKeyController.text = prefs.getString('whisper_api_key') ?? '';
       _remoteModelController.text =
           prefs.getString('whisper_remote_model') ?? '';
+      _azureSubscriptionKeyController.text =
+          prefs.getString('azure_speech_key') ?? '';
+      _azureRegionController.text =
+          prefs.getString('azure_speech_region') ?? '';
+      _azureBridgeServerController.text =
+          prefs.getString('azure_bridge_server_url') ?? '';
     });
   }
 
@@ -122,9 +133,40 @@ class WhisperSettingsPageState extends State<WhisperSettingsPage> {
       await prefs.setString('whisper_api_key', _apiKeyController.text);
       await prefs.setString(
           'whisper_remote_model', _remoteModelController.text);
+      await prefs.setBool('whisper_use_websocket', _useWebSocket);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Whisper configuration saved!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _saveAzure() async {
+    try {
+      if (_azureSubscriptionKeyController.text.isEmpty) {
+        throw Exception("Azure subscription key is required");
+      }
+      if (_azureRegionController.text.isEmpty) {
+        throw Exception("Azure region is required");
+      }
+      if (_azureBridgeServerController.text.isEmpty) {
+        throw Exception("Bridge server URL is required");
+      }
+
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('whisper_mode', _selectedMode!);
+      await prefs.setString(
+          'azure_speech_key', _azureSubscriptionKeyController.text);
+      await prefs.setString('azure_speech_region', _azureRegionController.text);
+      await prefs.setString(
+          'azure_bridge_server_url', _azureBridgeServerController.text);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Azure Speech configuration saved!')),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -181,8 +223,56 @@ class WhisperSettingsPageState extends State<WhisperSettingsPage> {
         controller: _remoteModelController,
       ),
       SizedBox(height: 20),
+      CheckboxListTile(
+        title: Text('Use WebSocket for live transcription'),
+        subtitle: Text('Disable if your API doesn\'t support WebSocket'),
+        value: _useWebSocket,
+        onChanged: (bool? value) {
+          setState(() {
+            _useWebSocket = value ?? true;
+          });
+        },
+      ),
+      SizedBox(height: 20),
       ElevatedButton(
         onPressed: _saveRemote,
+        style: ElevatedButton.styleFrom(
+          minimumSize: Size(double.infinity, 36), // Expand full width
+        ),
+        child: Text('Save'),
+      ),
+    ];
+    final azureOpts = [
+      Text('Azure Speech Service details:', style: TextStyle(fontSize: 18)),
+      SizedBox(height: 10),
+      TextField(
+        decoration: InputDecoration(
+          labelText: 'Subscription Key',
+          hintText: 'Your Azure Speech subscription key',
+        ),
+        controller: _azureSubscriptionKeyController,
+        obscureText: true,
+      ),
+      SizedBox(height: 10),
+      TextField(
+        decoration: InputDecoration(
+          labelText: 'Region',
+          hintText: 'e.g., westus, eastus, westeurope',
+        ),
+        controller: _azureRegionController,
+      ),
+      SizedBox(height: 10),
+      TextField(
+        decoration: InputDecoration(
+          labelText: 'Bridge Server URL',
+          hintText: 'http://your-server:3000',
+          helperText: 'URL of the Node.js bridge server for live transcription',
+        ),
+        controller: _azureBridgeServerController,
+      ),
+      SizedBox(height: 20),
+      ElevatedButton(
+        onPressed: _saveAzure,
         style: ElevatedButton.styleFrom(
           minimumSize: Size(double.infinity, 36), // Expand full width
         ),
@@ -212,6 +302,10 @@ class WhisperSettingsPageState extends State<WhisperSettingsPage> {
                 DropdownMenuItem(
                   value: "remote",
                   child: Text("Remote"),
+                ),
+                DropdownMenuItem(
+                  value: "azure",
+                  child: Text("Azure Speech"),
                 )
               ],
             ),
@@ -229,7 +323,11 @@ class WhisperSettingsPageState extends State<WhisperSettingsPage> {
                     child: Text(lang),
                   );
                 }).toList()),
-            ...(_selectedMode == "local" ? localOpts : remoteOpts),
+            ...(_selectedMode == "local"
+                ? localOpts
+                : _selectedMode == "azure"
+                    ? azureOpts
+                    : remoteOpts),
           ]),
         ),
       ),

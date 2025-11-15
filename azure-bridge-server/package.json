@@ -1,0 +1,17 @@
+{
+  "name": "azure-speech-bridge",
+  "version": "1.0.0",
+  "description": "WebSocket bridge server for Azure Speech Service",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.14.2",
+    "microsoft-cognitiveservices-speech-sdk": "^1.34.0"
+  },
+  "keywords": ["azure", "speech", "websocket", "bridge"],
+  "author": "",
+  "license": "MIT"
+}

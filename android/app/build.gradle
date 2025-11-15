@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "dev.maartje.fahrplan"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.3.13750724"
+    ndkVersion = "29.0.13113456"
 
   
     compileOptions {

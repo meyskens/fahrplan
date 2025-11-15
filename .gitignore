@@ -72,3 +72,4 @@ app.*.map.json
 assets/badapple/
 
 .cxx/
+node_modules/
