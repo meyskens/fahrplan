@@ -42,8 +42,9 @@ class FahrplanStopPageState extends State<FahrplanStopPage> {
       context: context,
       builder: (context) {
         return _AddItemDialog(
-          onAdd: (title, time) async {
-            final newItem = FahrplanStopItem(title: title, time: time);
+          onAdd: (title, time, showNotification) async {
+            final newItem = FahrplanStopItem(
+                title: title, time: time, showNotification: showNotification);
             await _fahrplanStopBox.add(newItem);
             await _sortBox();
             setState(() {});
@@ -61,9 +62,12 @@ class FahrplanStopPageState extends State<FahrplanStopPage> {
         builder: (context) {
           return _AddItemDialog(
             item: item,
-            onAdd: (title, time) async {
-              final newItem =
-                  FahrplanStopItem(title: title, time: time, uuid: item.uuid);
+            onAdd: (title, time, showNotification) async {
+              final newItem = FahrplanStopItem(
+                  title: title,
+                  time: time,
+                  uuid: item.uuid,
+                  showNotification: showNotification);
               await _fahrplanStopBox.putAt(index, newItem);
               await _sortBox();
               setState(() {});
@@ -169,7 +173,7 @@ class FahrplanStopPageState extends State<FahrplanStopPage> {
 }
 
 class _AddItemDialog extends StatefulWidget {
-  final Function(String, DateTime) onAdd;
+  final Function(String, DateTime, bool) onAdd;
   final FahrplanStopItem? item;
 
   const _AddItemDialog({required this.onAdd, this.item});
@@ -181,12 +185,14 @@ class _AddItemDialog extends StatefulWidget {
 class _AddItemDialogState extends State<_AddItemDialog> {
   TextEditingController titleController = TextEditingController();
   late DateTime time;
+  late bool showNotification;
 
   @override
   void initState() {
     super.initState();
     titleController.text = widget.item?.title ?? '';
     time = widget.item?.time ?? DateTime.now().add(Duration(hours: 1));
+    showNotification = widget.item?.showNotification ?? true;
   }
 
   @override
@@ -238,12 +244,22 @@ class _AddItemDialogState extends State<_AddItemDialog> {
               ),
             ],
           ),
+          SizedBox(height: 10),
+          CheckboxListTile(
+            title: Text('Show notification'),
+            value: showNotification,
+            onChanged: (bool? value) {
+              setState(() {
+                showNotification = value ?? true;
+              });
+            },
+          ),
         ],
       ),
       actions: [
         TextButton(
           onPressed: () {
-            widget.onAdd(titleController.text, time);
+            widget.onAdd(titleController.text, time, showNotification);
             Navigator.of(context).pop();
           },
           child: widget.item == null ? Text('Add') : Text('Save'),

@@ -64,12 +64,15 @@ class StopsManager {
       bl.sendText(item.title, delay: const Duration(seconds: 10));
     }
     // retrigger myself in 10 seconds
-    final timer = Timer(const Duration(seconds: 20), () {
+    final timer = Timer(const Duration(seconds: 10), () {
       _triggerTimer(item);
     });
     timers.add(timer);
 
     // show notification
+    if (!item.showNotification) {
+      return;
+    }
     flutterLocalNotificationsPlugin.show(
       Random().nextInt(1000),
       'Fahrplan',
