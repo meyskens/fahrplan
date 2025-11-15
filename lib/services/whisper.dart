@@ -1271,10 +1271,21 @@ class WhisperAzureSpeechService implements WhisperService {
               out.add(accumulatedTranscription);
               debugPrint('Azure final transcription: $text');
             } else if (type == 'partial' && text.isNotEmpty) {
-              // Partial/hypothesis result - can be displayed as real-time feedback
+              // Partial/hypothesis result - send as real-time feedback
+              // This replaces previous partial results until we get final
+              String partialResult = accumulatedTranscription.isEmpty
+                  ? text
+                  : accumulatedTranscription + ' ' + text;
+
+              if (partialResult.length > 500) {
+                partialResult = _trimAtSentenceBoundary(
+                  partialResult,
+                  400,
+                );
+              }
+
+              out.add(partialResult);
               debugPrint('Azure partial transcription: $text');
-              // Optionally send partial results too
-              // out.add(accumulatedTranscription + ' ' + text);
             } else if (type == 'error') {
               debugPrint('Azure error: ${jsonResponse['message']}');
               isListening = false;
