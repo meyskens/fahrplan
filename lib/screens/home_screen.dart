@@ -4,6 +4,7 @@ import 'package:fahrplan/screens/fahrplan_daily.dart';
 import 'package:fahrplan/screens/fahrplan_stop.dart';
 import 'package:fahrplan/screens/settings_screen.dart';
 import 'package:fahrplan/screens/transcribe_screen.dart';
+import 'package:fahrplan/screens/webview_screen.dart';
 import 'package:fahrplan/utils/ui_perfs.dart';
 import 'package:fahrplan/widgets/current_fahrplan.dart';
 import 'package:fahrplan/widgets/glass_status.dart';
@@ -109,6 +110,27 @@ class _HomePageState extends State<HomePage> {
                 context,
                 MaterialPageRoute(
                     builder: (context) => FahrplanChecklistPage()),
+              );
+            },
+          ),
+          ListTile(
+            title: Row(
+              children: [
+                _ui.trainNerdMode
+                    ? Image(
+                        image: AssetImage('assets/icons/tvm.png'),
+                        height: 20,
+                      )
+                    : Icon(Icons.web),
+                SizedBox(width: 10),
+                Text('Web Views'),
+              ],
+            ),
+            trailing: Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => FahrplanWebViewPage()),
               );
             },
           ),

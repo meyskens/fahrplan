@@ -377,6 +377,7 @@ class BluetoothManager {
     if (_currentTextOperation != null && !_currentTextOperation!.isCompleted) {
       _currentTextOperation!.complete();
       debugPrint('Cancelled previous text operation');
+      await Future.delayed(Duration(milliseconds: 200));
     }
 
     // Create new completer for this operation
