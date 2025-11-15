@@ -26,14 +26,13 @@ class FahrplanCalendarComposer {
     final deviceCal = DeviceCalendarPlugin();
     final fpCals = calendarBox.values.toList();
 
-    Location currentLocation = getLocation('Etc/UTC');
-    String timezone = 'Etc/UTC';
+    String timezone = 'Europe/Brussels';
     try {
       timezone = await FlutterNativeTimezoneLatest.getLocalTimezone();
     } catch (e) {
       debugPrint('Could not get the local timezone');
     }
-    currentLocation = getLocation(timezone);
+    Location currentLocation = getLocation(timezone);
     setLocalLocation(currentLocation);
 
     final items = <FahrplanItem>[];
