@@ -16,6 +16,7 @@ While it is meant to offer an "OS" for the Even Realities G1 and will copy some 
 ### Dashboard Widgets
 * **Daily Fahrplan**: A daily schedule presented in the G1 dashboard with timed tasks
 * **Stops**: One-off timers that present immediate text messages for time-critical actions (e.g., "leave for work")
+* **Waypoints**: Time-based reminders that can be added, delayed, or deleted via voice commands
 * **Checklists**: Persistent to-do lists displayed on your dashboard
 * **WebViews**: Custom web content widgets that can be displayed on demand
 * **[Träwelling](https://traewelling.de/) Integration**: Real-time train info including next stops and delays
@@ -24,10 +25,15 @@ While it is meant to offer an "OS" for the Even Realities G1 and will copy some 
 Voice commands can be triggered by holding the left button (Even AI) or using **wake word detection**:
 
 * **Wake Word Detection**: Say "Okay Glass" to activate voice control (supports Porcupine and Snowboy engines)
+* **On-Device Transcription or Online**: Uses Whisper.cpp for local, private voice-to-text processing or use your own API for online transcription.
 * **Music Control**: Play, pause, next, previous, and query what's playing
 * **Checklist Management**: Open/close checklists by voice (e.g., "open checklist shopping")
 * **WebView Management**: Show/hide custom web content (e.g., "show webview transit")
-* **HomeAssistant**: Send commands to HomeAssistant by voice
+* **Waypoint Control**: Add, delete, or delay waypoints using voice commands
+* **Stop Management**: Delete stops by voice (e.g., "delete stop meds alarm")
+* **HomeAssistant Integration**: Send commands to HomeAssistant by voice
+* **LLM-Enhanced Command Matching**: Optional LLM integration for improved voice command recognition and natural language processing
+* **Live Transcription**: Real-time transcription feature using the G1's microphone
 
 ### Advanced Features
 * **Train Conductor Mode**: Enhanced Träwelling features for conductors
