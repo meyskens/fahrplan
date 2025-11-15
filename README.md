@@ -8,14 +8,30 @@ While it is meant to offer an "OS" for the Even Realities G1 and will copy some 
 
 ## Features
 
-* Notification mirroring (app whitelist still needs to be build in official app, fixed soon)
-* Update of time and weather 
-* [Träwelling](https://traewelling.de/) integration for real time train info
-* Daily: a daily "fahrplan" presented in G1 dashboard
-* Stops: important one off-timers presenting an immediate text message for an important timed action (eg. leave for train)
-* HomeAssistant: send commands by holding the left button (Even AI). Transcribed locally with Wisper (self hosted also possible)
-* Checklists: open and close lists on your dashboard by holding the right button (QuickNote) saying "checklist <name>" or "close checklist <name>"
-* Debug screen: with extra fun like bad apple! (unzip assets/badapple.zip first before compiling for this)
+### Core Functionality
+* **Notification Mirroring**: Mirror notifications from whitelisted apps to your G1 glasses
+* **Time & Weather**: Automatic updates of time and weather information on the dashboard
+* **Calendar Integration**: Display calendar events on your glasses
+
+### Dashboard Widgets
+* **Daily Fahrplan**: A daily schedule presented in the G1 dashboard with timed tasks
+* **Stops**: One-off timers that present immediate text messages for time-critical actions (e.g., "leave for work")
+* **Checklists**: Persistent to-do lists displayed on your dashboard
+* **WebViews**: Custom web content widgets that can be displayed on demand
+* **[Träwelling](https://traewelling.de/) Integration**: Real-time train info including next stops and delays
+
+### Voice Control
+Voice commands can be triggered by holding the left button (Even AI) or using **wake word detection**:
+
+* **Wake Word Detection**: Say "Okay Glass" to activate voice control (supports Porcupine and Snowboy engines)
+* **Music Control**: Play, pause, next, previous, and query what's playing
+* **Checklist Management**: Open/close checklists by voice (e.g., "open checklist shopping")
+* **WebView Management**: Show/hide custom web content (e.g., "show webview transit")
+* **HomeAssistant**: Send commands to HomeAssistant by voice
+
+### Advanced Features
+* **Train Conductor Mode**: Enhanced Träwelling features for conductors
+* **Debug Screen**: Testing interface with fun extras like Bad Apple video (unzip `assets/badapple.zip` first)
 
 ## Get it!
 
