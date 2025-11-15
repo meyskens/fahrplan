@@ -2,7 +2,7 @@ import 'package:device_calendar/device_calendar.dart';
 import 'package:fahrplan/models/fahrplan/fahrplan_dashboard.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
-import 'package:flutter_native_timezone/flutter_native_timezone.dart';
+import 'package:flutter_native_timezone_latest/flutter_native_timezone_latest.dart';
 
 part 'calendar.g.dart';
 
@@ -29,7 +29,7 @@ class FahrplanCalendarComposer {
     Location currentLocation = getLocation('Etc/UTC');
     String timezone = 'Etc/UTC';
     try {
-      timezone = await FlutterNativeTimezone.getLocalTimezone();
+      timezone = await FlutterNativeTimezoneLatest.getLocalTimezone();
     } catch (e) {
       debugPrint('Could not get the local timezone');
     }
