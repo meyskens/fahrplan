@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:fahrplan/models/fahrplan/widgets/homassistant.dart';
@@ -15,8 +14,6 @@ import 'package:fahrplan/utils/wakeword_engine.dart';
 import 'package:fahrplan/voice/voicecontrol.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mutex/mutex.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:uuid/uuid.dart';
 
 // Command response status codes
 const int RESPONSE_SUCCESS = 0xC9;
@@ -349,28 +346,19 @@ class VoiceDataCollector {
       ];
       header.addAll(pcm.toList());
 
-      final Directory documentDirectory =
-          await getApplicationDocumentsDirectory();
-      // Prepare wav file
-
-      final String wavPath = '${documentDirectory.path}/${Uuid().v4()}.wav';
-      debugPrint('Wav path: $wavPath');
-      final wavFile = File(wavPath);
-      await wavFile.writeAsBytes(Uint8List.fromList(header));
+      // Create in-memory WAV data
+      final wavData = Uint8List.fromList(header);
 
       if (_wakeWordDetector == null) {
         await _createDetector();
         return;
       }
 
-      final detected = await _wakeWordDetector!.processFile(File(wavPath));
+      final detected = await _wakeWordDetector!.processAudioData(wavData);
 
       if (detected && onWakeWordDetected != null) {
         onWakeWordDetected!();
       }
-
-      // delete wav file
-      await wavFile.delete();
     } catch (e) {
       debugPrint("Error processing wake word: $e");
     }

@@ -19,7 +19,8 @@ abstract class WakeWordDetector {
 
   /// Process audio data and detect wake word
   /// Returns true if wake word is detected
-  Future<bool> processFile(File wavFile);
+  /// [wavData] should be WAV format audio data with header
+  Future<bool> processAudioData(Uint8List wavData);
 
   /// Clean up resources
   void dispose();
@@ -69,7 +70,7 @@ class PorcupineDetector implements WakeWordDetector {
   }
 
   @override
-  Future<bool> processFile(File wavFile) async {
+  Future<bool> processAudioData(Uint8List wavData) async {
     if (_porcupine == null) {
       await initialize();
     }
@@ -78,11 +79,9 @@ class PorcupineDetector implements WakeWordDetector {
       return false;
     }
 
-    final raf = wavFile.openSync(mode: FileMode.read);
-
     try {
       // Parse WAV header (44 bytes for PCM)
-      final header = raf.readSync(44);
+      final header = wavData.sublist(0, 44);
       final byteData = ByteData.sublistView(header);
 
       final channels = byteData.getUint16(22, Endian.little);
@@ -92,21 +91,24 @@ class PorcupineDetector implements WakeWordDetector {
       if (channels != 1 || sampleRate != 16000 || bitsPerSample != 16) {
         debugPrint(
           "Porcupine requires 16kHz, 16-bit PCM, mono audio. "
-          "File: $channels ch, $sampleRate Hz, $bitsPerSample bits",
+          "Data: $channels ch, $sampleRate Hz, $bitsPerSample bits",
         );
         return false;
       }
 
-      // Read audio in chunks
+      // Get PCM data (skip 44-byte header)
+      final pcmData = wavData.sublist(44);
+
+      // Process audio in chunks
       final frameLength = _porcupine!.frameLength;
-      final bufferSize = frameLength * 2; // 16-bit PCM => 2 bytes per sample
-      final frameBuffer = Uint8List(bufferSize);
+      final bytesPerFrame = frameLength * 2; // 16-bit PCM => 2 bytes per sample
 
-      while (true) {
-        final bytesRead = raf.readIntoSync(frameBuffer);
-        if (bytesRead < bufferSize) break;
+      for (int offset = 0; offset < pcmData.length; offset += bytesPerFrame) {
+        if (offset + bytesPerFrame > pcmData.length) break;
 
-        final samples = Int16List.view(frameBuffer.buffer, 0, frameLength);
+        final frameData = pcmData.sublist(offset, offset + bytesPerFrame);
+        final samples = Int16List.view(
+            frameData.buffer, frameData.offsetInBytes, frameLength);
         final result = await _porcupine!.process(samples);
 
         if (result >= 0) {
@@ -116,8 +118,9 @@ class PorcupineDetector implements WakeWordDetector {
       }
 
       return false;
-    } finally {
-      raf.closeSync();
+    } catch (e) {
+      debugPrint("Error processing audio with Porcupine: $e");
+      return false;
     }
   }
 
@@ -196,7 +199,7 @@ class SnowboyDetector implements WakeWordDetector {
   }
 
   @override
-  Future<bool> processFile(File wavFile) async {
+  Future<bool> processAudioData(Uint8List wavData) async {
     if (_snowboy == null) {
       await initialize();
     }
@@ -209,11 +212,8 @@ class SnowboyDetector implements WakeWordDetector {
       // Reset detection result
       _detectionResult = false;
 
-      // Read the entire WAV file
-      final bytes = await wavFile.readAsBytes();
-
       // Skip WAV header (44 bytes) and get PCM data
-      final pcmData = Uint8List.sublistView(bytes, 44);
+      final pcmData = Uint8List.sublistView(wavData, 44);
 
       // Create combined data with past 2 samples injected before current sample
       final List<int> combinedData = [];
