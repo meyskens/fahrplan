@@ -69,6 +69,10 @@ dependencies:
   audioplayers: ^6.5.0
   whisper_ggml: ^1.7.0
   flutter_media_controller: ^1.0.3
+  flutter_snowboy:
+    git:
+      url: https://github.com/pavan7parekh/FlutterSnowboy
+      ref: 0e9650c83c20fd1a23e03091eef6c02c98949075
 
 dev_dependencies:
   flutter_test:
@@ -94,8 +98,9 @@ flutter:
     - assets/icons/
     - assets/badapple/
     - assets/train-data/
-    - assets/whisper/
     - assets/okay-glass.ppn
+    - assets/snowboy/
+    - assets/wakeword/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -40,16 +40,6 @@ class Voicecontrol {
 
   Future<void> startVoiceControl() async {
     try {
-      String text = "How may I assist you?\n";
-      for (VoiceModule module in modules) {
-        for (VoiceCommand command in module.commands) {
-          text += "- [${module.name}] ${command.command}\n";
-        }
-      }
-      bt.sendText(text, clearOnComplete: false, delay: Duration(seconds: 3));
-
-      await Future.delayed(const Duration(seconds: 1));
-
       // Start voice data collection
       final btr = BluetoothReciever.singleton;
       btr.voiceCollectorAI.isRecording = true;
@@ -83,6 +73,16 @@ class Voicecontrol {
           await bt.clearScreen();
         }
       });
+
+      String text = "How may I assist you?\n";
+      for (VoiceModule module in modules) {
+        for (VoiceCommand command in module.commands) {
+          text += "- [${module.name}] ${command.command}\n";
+        }
+      }
+      bt.sendText(text, clearOnComplete: false, delay: Duration(seconds: 3));
+
+      //await Future.delayed(const Duration(seconds: 1));
 
       // Start live transcription
       final whisperService = await WhisperService.service();

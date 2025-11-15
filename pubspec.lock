@@ -604,6 +604,15 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.6.1"
+  flutter_snowboy:
+    dependency: "direct main"
+    description:
+      path: "."
+      ref: "0e9650c83c20fd1a23e03091eef6c02c98949075"
+      resolved-ref: "0e9650c83c20fd1a23e03091eef6c02c98949075"
+      url: "https://github.com/pavan7parekh/FlutterSnowboy"
+    source: git
+    version: "0.1.2+1"
   flutter_test:
     dependency: "direct dev"
     description: flutter

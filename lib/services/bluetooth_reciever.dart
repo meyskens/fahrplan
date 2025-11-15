@@ -11,12 +11,11 @@ import 'package:fahrplan/services/bluetooth_manager.dart';
 import 'package:fahrplan/services/whisper.dart';
 import 'package:fahrplan/utils/lc3.dart';
 import 'package:fahrplan/utils/wakeword_settings.dart';
+import 'package:fahrplan/utils/wakeword_engine.dart';
 import 'package:fahrplan/voice/voicecontrol.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mutex/mutex.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:porcupine_flutter/porcupine.dart';
-import 'package:porcupine_flutter/porcupine_error.dart';
 import 'package:uuid/uuid.dart';
 
 // Command response status codes
@@ -28,7 +27,7 @@ class BluetoothReciever {
 
   final voiceCollectorAI = VoiceDataCollector();
   final voiceCollectorNote = VoiceDataCollector();
-  final voiceCollectorWakeWord = VoiceDataCollector(detectWakeWord: true);
+  late final VoiceDataCollector voiceCollectorWakeWord;
 
   int _syncId = 0;
 
@@ -36,7 +35,15 @@ class BluetoothReciever {
     return singleton;
   }
 
-  BluetoothReciever._internal();
+  BluetoothReciever._internal() {
+    voiceCollectorWakeWord = VoiceDataCollector(
+      detectWakeWord: true,
+      onWakeWordDetected: () {
+        debugPrint('Wake word detected - starting voice control');
+        Voicecontrol().startVoiceControl();
+      },
+    );
+  }
 
   Future<void> receiveHandler(GlassSide side, List<int> data) async {
     if (data.isEmpty) return;
@@ -76,7 +83,7 @@ class BluetoothReciever {
         break;
 
       default:
-        debugPrint('[$side] Unknown command: 0x${command.toRadixString(16)}');
+      //debugPrint('[$side] Unknown command: 0x${command.toRadixString(16)}');
     }
   }
 
@@ -169,8 +176,8 @@ class BluetoothReciever {
   }
 
   void handleVoiceData(GlassSide side, int seq, List<int> voiceData) {
-    debugPrint(
-        '[$side] Received voice data chunk: seq=$seq, length=${voiceData.length}');
+    //debugPrint(
+    //    '[$side] Received voice data chunk: seq=$seq, length=${voiceData.length}');
     if (voiceCollectorAI.isRecording) {
       voiceCollectorAI.addChunk(seq, voiceData);
     } else if (voiceCollectorWakeWord.isRecording) {
@@ -204,8 +211,7 @@ class BluetoothReciever {
 
   void handleQuickNoteAudioData(GlassSide side, List<int> data) async {
     if (data.length > 4 && data[4] != 0x02) {
-      final dataStr = data.map((e) => e.toRadixString(16)).join(' ');
-      debugPrint('[$side] not an audio data packet: $dataStr');
+      //debugPrint('[$side] not an audio data packet');
       return;
     }
     /*  audio_response_packet_buf[0] = 0x1E;
@@ -272,26 +278,23 @@ class VoiceDataCollector {
 
   bool isRecording = false;
   bool detectWakeWord = false;
+  final void Function()? onWakeWordDetected;
 
-  Porcupine? _porcupine;
+  WakeWordDetector? _wakeWordDetector;
   Timer? _processPCMTicker;
 
-  VoiceDataCollector({this.detectWakeWord = false});
+  VoiceDataCollector({this.detectWakeWord = false, this.onWakeWordDetected});
 
-  Future<void> _createPorcupine() async {
-    final accessKey = await WakeWordSettings.getAccessKey();
-    if (accessKey.trim().isEmpty) {
-      debugPrint("No Porcupine access key provided");
-      return;
-    }
-
+  Future<void> _createDetector() async {
     try {
-      _porcupine = await Porcupine.fromKeywordPaths(
-        accessKey,
-        ["assets/okay-glass.ppn"],
+      _wakeWordDetector = await WakeWordDetector.create(
+        onWakeWordDetected: onWakeWordDetected,
       );
-    } on PorcupineException catch (err) {
-      debugPrint("Failed to create Porcupine: $err");
+      if (_wakeWordDetector != null) {
+        await _wakeWordDetector!.initialize();
+      }
+    } catch (err) {
+      debugPrint("Failed to create wake word detector: $err");
     }
   }
 
@@ -355,19 +358,16 @@ class VoiceDataCollector {
       final wavFile = File(wavPath);
       await wavFile.writeAsBytes(Uint8List.fromList(header));
 
-      if (_porcupine == null) {
-        await _createPorcupine();
-        //_porcupine!.process(header);
+      if (_wakeWordDetector == null) {
+        await _createDetector();
         return;
       }
 
-      final wavProcessor = WavToPorcupine(_porcupine!);
+      final detected = await _wakeWordDetector!.processFile(File(wavPath));
 
-      await wavProcessor.processFile(File(wavPath), (detected) {
-        if (detected) {
-          Voicecontrol().startVoiceControl();
-        }
-      });
+      if (detected && onWakeWordDetected != null) {
+        onWakeWordDetected!();
+      }
 
       // delete wav file
       await wavFile.delete();
@@ -429,56 +429,8 @@ class VoiceDataCollector {
       _processPCMTicker?.cancel();
       _processPCMTicker = null;
 
-      _porcupine?.delete();
-      _porcupine = null;
+      _wakeWordDetector?.dispose();
+      _wakeWordDetector = null;
     }
-  }
-}
-
-/// Utility to read a WAV file and stream raw PCM frames for Porcupine.
-class WavToPorcupine {
-  final Porcupine porcupine;
-  final int frameLength;
-
-  WavToPorcupine(this.porcupine) : frameLength = porcupine.frameLength;
-
-  /// Opens a WAV file and streams PCM frames to Porcupine
-  Future<void> processFile(File wavFile, void Function(bool) onWakeWord) async {
-    final raf = wavFile.openSync(mode: FileMode.read);
-
-    // --- Parse WAV header (44 bytes for PCM) ---
-    final header = raf.readSync(44);
-    final byteData = ByteData.sublistView(header);
-
-    final channels = byteData.getUint16(22, Endian.little);
-    final sampleRate = byteData.getUint32(24, Endian.little);
-    final bitsPerSample = byteData.getUint16(34, Endian.little);
-
-    if (channels != 1 || sampleRate != 16000 || bitsPerSample != 16) {
-      throw UnsupportedError(
-        "Porcupine requires 16kHz, 16-bit PCM, mono audio. "
-        "File: $channels ch, $sampleRate Hz, $bitsPerSample bits",
-      );
-    }
-
-    // --- Read audio in chunks ---
-    final bufferSize = frameLength * 2; // 16-bit PCM => 2 bytes per sample
-    final frameBuffer = Uint8List(bufferSize);
-
-    while (true) {
-      final bytesRead = raf.readIntoSync(frameBuffer);
-      if (bytesRead < bufferSize) break;
-
-      final samples = Int16List.view(frameBuffer.buffer, 0, frameLength);
-      final result = await porcupine.process(samples);
-
-      //debugPrint('Porcupine result: $result');
-      if (result >= 0) {
-        onWakeWord(true);
-        break;
-      }
-    }
-
-    raf.closeSync();
   }
 }

@@ -51,6 +51,7 @@ class BluetoothManager {
   StopsManager stopsManager = StopsManager();
 
   Timer? _syncTimer;
+  Completer<void>? _currentTextOperation;
 
   Glass? leftGlass;
   Glass? rightGlass;
@@ -372,6 +373,15 @@ class BluetoothManager {
       return;
     }
 
+    // Cancel any existing text operation
+    if (_currentTextOperation != null && !_currentTextOperation!.isCompleted) {
+      _currentTextOperation!.complete();
+      debugPrint('Cancelled previous text operation');
+    }
+
+    // Create new completer for this operation
+    _currentTextOperation = Completer<void>();
+
     if (text.trim().isEmpty) {
       await clearScreen();
       return;
@@ -563,12 +573,30 @@ class BluetoothManager {
 
   Future<void> _sendChunks(
       List<List<int>> chunks, Duration delay, bool clearOnComplete) async {
+    final currentOperation = _currentTextOperation;
+    
     // Send each chunk with a delay between sends
-    for (List<int> chunk in chunks) {
-      await sendCommandToGlasses(chunk);
-      await Future.delayed(delay);
+    for (int i = 0; i < chunks.length; i++) {
+      // Check if operation was cancelled
+      if (currentOperation != null && currentOperation.isCompleted) {
+        debugPrint('Text operation cancelled at chunk ${i + 1}/${chunks.length}');
+        return;
+      }
+      
+      await sendCommandToGlasses(chunks[i]);
+      
+      // Only delay if not the last chunk or if we need to clear
+      if (i < chunks.length - 1 || clearOnComplete) {
+        await Future.delayed(delay);
+      }
     }
+    
     if (clearOnComplete) {
+      // Check one more time before clearing
+      if (currentOperation != null && currentOperation.isCompleted) {
+        debugPrint('Text operation cancelled before clear');
+        return;
+      }
       clearScreen();
     }
   }
