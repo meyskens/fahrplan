@@ -19,7 +19,7 @@ While it is meant to offer an "OS" for the Even Realities G1 and will copy some 
 
 ## Get it!
 
-- Latest build of the main branch: [Android APK](https://nightly.link/meyskens/fahrplan/workflows/build_apk/main/app-release.apk.zip)
+- Latest build of the main branch: [Android APK](https://nightly.link/meyskens/fahrplan/workflows/build_apk.yml/main/app-release.apk.zip)
 
 ## Why the G1 specifically?
 
