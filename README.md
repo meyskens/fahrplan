@@ -58,6 +58,7 @@ Thanks to @emingenc and @NyasakiAT for their work in building the G1 BLE librari
 - https://github.com/emingenc/even_glasses (The most complete library!)
 - https://github.com/emingenc/g1_flutter_blue_plus/tree/main (The foundations for the Dart implementation)
 - https://github.com/NyasakiAT/G1-Navigate (Further development of the Dart implementation and BMP composing code)
+- https://github.com/ayroblu/bazel-demo/ (Being the first to have Navigation)
 
 ## Copy me!
 
