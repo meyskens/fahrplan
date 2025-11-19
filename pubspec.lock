@@ -334,6 +334,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.0"
+  dart_lame:
+    dependency: transitive
+    description:
+      name: dart_lame
+      sha256: "5f0e00e54d0d5f0334940fd95f59fbb359f9febc4d3359886e18b48861b60b18"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.3"
   dart_openai:
     dependency: "direct main"
     description:
@@ -540,6 +548,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.1"
+  flutter_broadcasts:
+    dependency: "direct main"
+    description:
+      path: "deps/flutter_broadcasts"
+      relative: true
+    source: path
+    version: "0.4.0"
   flutter_cache_manager:
     dependency: transitive
     description:
@@ -548,6 +563,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.4.1"
+  flutter_lame:
+    dependency: "direct main"
+    description:
+      name: flutter_lame
+      sha256: "3a1353fc1ec84b631e950e42a6f5a9630b92d386788f2ed9cd8192603cb4d1e2"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.3"
   flutter_launcher_icons:
     dependency: "direct dev"
     description:

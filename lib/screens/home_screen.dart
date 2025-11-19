@@ -5,11 +5,13 @@ import 'package:fahrplan/screens/fahrplan_stop.dart';
 import 'package:fahrplan/screens/fahrplan_waypoint.dart';
 import 'package:fahrplan/screens/settings_screen.dart';
 import 'package:fahrplan/screens/transcribe_screen.dart';
+import 'package:fahrplan/screens/mood_analysis_screen.dart';
 import 'package:fahrplan/screens/webview_screen.dart';
 import 'package:fahrplan/utils/ui_perfs.dart';
 import 'package:fahrplan/widgets/current_fahrplan.dart';
 import 'package:fahrplan/widgets/glass_status.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/bluetooth_manager.dart';
 
 class HomePage extends StatefulWidget {
@@ -22,10 +24,20 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final BluetoothManager bluetoothManager = BluetoothManager();
   final UiPerfs _ui = UiPerfs.singleton;
+  bool _enableUntestedFeatures = false;
 
   @override
   void initState() {
     super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _enableUntestedFeatures =
+          prefs.getBool('enable_untested_features') ?? false;
+    });
   }
 
   @override
@@ -40,7 +52,10 @@ class _HomePageState extends State<HomePage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => SettingsPage()),
-              ).then((_) => setState(() {}));
+              ).then((_) {
+                _loadPreferences();
+                setState(() {});
+              });
             },
           )
         ],
@@ -198,6 +213,28 @@ class _HomePageState extends State<HomePage> {
               );
             },
           ),
+          if (_enableUntestedFeatures)
+            ListTile(
+              title: Row(
+                children: [
+                  _ui.trainNerdMode
+                      ? Image(
+                          image: AssetImage('assets/icons/gsmr.png'),
+                          height: 20,
+                        )
+                      : Icon(Icons.sentiment_satisfied),
+                  SizedBox(width: 10),
+                  Text('Mood Analysis'),
+                ],
+              ),
+              trailing: Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => MoodAnalysisScreen()),
+                );
+              },
+            ),
         ],
       ),
     );

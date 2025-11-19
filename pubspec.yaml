@@ -75,6 +75,9 @@ dependencies:
       ref: 0e9650c83c20fd1a23e03091eef6c02c98949075
   flutter_native_timezone_latest: ^1.0.0
   chrono_dart: ^2.0.2
+  flutter_lame: ^1.0.3
+  flutter_broadcasts:
+    path: ./deps/flutter_broadcasts
 
 dev_dependencies:
   flutter_test:

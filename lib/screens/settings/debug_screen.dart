@@ -8,6 +8,7 @@ import 'package:fahrplan/models/g1/translate.dart';
 import 'package:fahrplan/services/bluetooth_manager.dart';
 import 'package:fahrplan/utils/bitmap.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DebugPage extends StatefulWidget {
   const DebugPage({super.key});
@@ -21,6 +22,7 @@ class _DebugPageSate extends State<DebugPage> {
   final BluetoothManager bluetoothManager = BluetoothManager();
 
   int _seqId = 0;
+  bool _enableUntestedFeatures = false;
 
   void _sendText() async {
     String text = _textController.text;
@@ -214,7 +216,23 @@ class _DebugPageSate extends State<DebugPage> {
   @override
   void initState() {
     super.initState();
-    // Optionally initiate scan here or via button
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _enableUntestedFeatures =
+          prefs.getBool('enable_untested_features') ?? false;
+    });
+  }
+
+  Future<void> _toggleUntestedFeatures(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('enable_untested_features', value);
+    setState(() {
+      _enableUntestedFeatures = value;
+    });
   }
 
   @override
@@ -226,6 +244,17 @@ class _DebugPageSate extends State<DebugPage> {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
+          CheckboxListTile(
+            title: const Text(
+                'Enable untested features that break the design phylosophy'),
+            value: _enableUntestedFeatures,
+            onChanged: (bool? value) {
+              if (value != null) {
+                _toggleUntestedFeatures(value);
+              }
+            },
+          ),
+          const Divider(),
           TextField(
             controller: _textController,
             decoration: const InputDecoration(
