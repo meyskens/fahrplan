@@ -20,6 +20,9 @@ class Glass {
   Timer? heartbeatTimer;
   int heartbeatSeq = 0;
 
+  // ACK tracking
+  final Map<int, Completer<void>> _ackCompleters = {};
+
   get isConnected => device.isConnected;
 
   BluetoothReciever reciever = BluetoothReciever.singleton;
@@ -90,6 +93,15 @@ class Glass {
 
     //replies.add(Uint8List.fromList(data));
 
+    // Check if this is an ACK for a pending command
+    if (data.isNotEmpty) {
+      int commandByte = data[0];
+      if (_ackCompleters.containsKey(commandByte)) {
+        _ackCompleters[commandByte]?.complete();
+        _ackCompleters.remove(commandByte);
+      }
+    }
+
     await reciever.receiveHandler(side, data);
   }
 
@@ -104,6 +116,44 @@ class Glass {
       }
     } else {
       debugPrint('UART TX not available for $side glass.');
+    }
+  }
+
+  Future<void> sendDataWithAck(List<int> data,
+      {Duration timeout = const Duration(seconds: 2)}) async {
+    if (uartTx == null) {
+      debugPrint('UART TX not available for $side glass.');
+      return;
+    }
+
+    if (data.isEmpty) {
+      debugPrint('Cannot send empty data');
+      return;
+    }
+
+    int commandByte = data[0];
+
+    // Create a completer for this command's ACK
+    final completer = Completer<void>();
+    _ackCompleters[commandByte] = completer;
+
+    try {
+      // Send the data
+      await uartTx!.write(data, withoutResponse: false);
+
+      // Wait for ACK with timeout
+      await completer.future.timeout(
+        timeout,
+        onTimeout: () {
+          debugPrint(
+              '[$side Glass] ACK timeout for command 0x${commandByte.toRadixString(16)}');
+          _ackCompleters.remove(commandByte);
+        },
+      );
+    } catch (e) {
+      debugPrint('Error sending data to $side glass: $e');
+      _ackCompleters.remove(commandByte);
+      rethrow;
     }
   }
 

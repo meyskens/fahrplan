@@ -356,12 +356,10 @@ class BluetoothManager {
 
   Future<void> sendCommandToGlasses(List<int> command) async {
     if (leftGlass != null) {
-      await leftGlass!.sendData(command);
-      await Future.delayed(Duration(milliseconds: 100));
+      await leftGlass!.sendDataWithAck(command);
     }
     if (rightGlass != null) {
-      await rightGlass!.sendData(command);
-      await Future.delayed(Duration(milliseconds: 100));
+      await rightGlass!.sendDataWithAck(command);
     }
   }
 
