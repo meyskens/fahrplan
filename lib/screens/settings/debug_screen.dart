@@ -1,6 +1,7 @@
 import 'package:fahrplan/models/android/weather_data.dart';
 import 'package:fahrplan/models/g1/calendar.dart';
 import 'package:fahrplan/models/g1/dashboard.dart';
+import 'package:fahrplan/models/g1/navigation.dart';
 import 'package:fahrplan/models/g1/note.dart';
 import 'package:fahrplan/models/g1/notification.dart';
 import 'package:fahrplan/models/g1/time_weather.dart';
@@ -213,6 +214,201 @@ class _DebugPageSate extends State<DebugPage> {
     }
   }
 
+  void _debugNavigationCommand() async {
+    if (bluetoothManager.isConnected) {
+      // Initialize navigation (like Swift's initData)
+      await bluetoothManager.startNavigation();
+      await Future.delayed(const Duration(milliseconds: 8));
+      debugPrint('Started navigation mode');
+
+      // Demo navigation sequence - matches Swift implementation structure
+      final directions = [
+        {
+          'totalDuration': '15 mins',
+          'totalDistance': '2500m',
+          'direction': 'Continue straight',
+          'distance': '500m',
+          'speed': '30km/h',
+          'turn': DirectionTurn.straight,
+          'x': 244, // position on secondary map (488/2)
+          'y': 68, // position on secondary map (136/2)
+        },
+        {
+          'totalDuration': '12 mins',
+          'totalDistance': '2000m',
+          'direction': 'Turn right',
+          'distance': '200m',
+          'speed': '25km/h',
+          'turn': DirectionTurn.right,
+          'x': 250,
+          'y': 70,
+        },
+        {
+          'totalDuration': '10 mins',
+          'totalDistance': '1500m',
+          'direction': 'Slight left',
+          'distance': '300m',
+          'speed': '35km/h',
+          'turn': DirectionTurn.slightLeft,
+          'x': 240,
+          'y': 65,
+        },
+        {
+          'totalDuration': '7 mins',
+          'totalDistance': '1000m',
+          'direction': 'Turn left',
+          'distance': '150m',
+          'speed': '20km/h',
+          'turn': DirectionTurn.left,
+          'x': 235,
+          'y': 68,
+        },
+        {
+          'totalDuration': '5 mins',
+          'totalDistance': '800m',
+          'direction': 'Continue straight',
+          'distance': '800m',
+          'speed': '40km/h',
+          'turn': DirectionTurn.straight,
+          'x': 244,
+          'y': 68,
+        },
+      ];
+
+      await bluetoothManager.sendNavigationPoller();
+
+      // Generate and send primary image (136x136) - road map + overlay
+      final primaryImage = _generateDemoRoadMap(136, 136);
+      final primaryOverlay = _generateDemoOverlay(136, 136, 1);
+      //await bluetoothManager.sendNavigationPrimaryImage(
+      //  image: primaryImage,
+      //  overlay: primaryOverlay,
+      //);
+      await Future.delayed(const Duration(milliseconds: 8));
+
+      debugPrint('Sent primary navigation image');
+
+      // Generate and send secondary image (488x136) - wider view
+      final secondaryImage = _generateDemoRoadMap(488, 136);
+      final secondaryOverlay =
+          _generateDemoOverlay(488, 136, 0, position: (1, 1));
+      //await bluetoothManager.sendNavigationSecondaryImage(
+      //  image: secondaryImage,
+      //  overlay: secondaryOverlay,
+      //);
+
+      debugPrint('Sent secondary navigation image');
+
+      await bluetoothManager.sendNavigationPoller();
+
+      for (var i = 0; i < directions.length; i++) {
+        await bluetoothManager.sendNavigationPoller();
+        var direction = directions[i];
+
+        // Send directions data with position (like Swift's directionsData)
+        final xPos = direction['x'] as int;
+        final yPos = direction['y'] as int;
+        await bluetoothManager.sendNavigationDirections(
+          totalDuration: direction['totalDuration'] as String,
+          totalDistance: direction['totalDistance'] as String,
+          direction: direction['direction'] as String,
+          distance: direction['distance'] as String,
+          speed: direction['speed'] as String,
+          directionTurn: direction['turn'] as int,
+          customX: [
+            (xPos >> 8) & 0xFF,
+            xPos & 0xFF
+          ], // Convert to bytes like Swift
+          customY: yPos,
+        );
+        await Future.delayed(const Duration(milliseconds: 8));
+
+        debugPrint(
+            'Sent navigation update ${i + 1}: ${direction['direction']} for ${direction['distance']}');
+        await Future.delayed(const Duration(seconds: 3));
+      }
+
+      // End navigation
+      await Future.delayed(const Duration(seconds: 1));
+      await bluetoothManager.endNavigation();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Navigation demo completed!')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  // Generate a simple demo road map (black and white pattern)
+  List<bool> _generateDemoRoadMap(int width, int height) {
+    final totalPixels = width * height;
+    final map = List<bool>.filled(totalPixels, false);
+
+    // Draw simple road pattern (vertical road in middle)
+    final roadWidth = width ~/ 4;
+    final roadStart = (width - roadWidth) ~/ 2;
+
+    for (int y = 0; y < height; y++) {
+      for (int x = roadStart; x < roadStart + roadWidth; x++) {
+        map[y * width + x] = true;
+      }
+      // Add center line
+      if (y % 10 < 5) {
+        final centerX = width ~/ 2;
+        for (int i = -1; i <= 1; i++) {
+          if (centerX + i >= 0 && centerX + i < width) {
+            map[y * width + centerX + i] = false;
+          }
+        }
+      }
+    }
+
+    return map;
+  }
+
+  // Generate demo overlay with route line and position marker
+  List<bool> _generateDemoOverlay(int width, int height, int step,
+      {(int, int)? position}) {
+    final totalPixels = width * height;
+    final overlay = List<bool>.filled(totalPixels, false);
+
+    // Draw route line (simplified)
+    final centerX = width ~/ 2;
+    for (int y = 0; y < height; y++) {
+      final offset = (step * 5 + y ~/ 10) % 20 - 10;
+      final x = centerX + offset;
+      if (x >= 0 && x < width) {
+        overlay[y * width + x] = true;
+        // Make line thicker
+        if (x + 1 < width) overlay[y * width + x + 1] = true;
+        if (x - 1 >= 0) overlay[y * width + x - 1] = true;
+      }
+    }
+
+    // Draw position marker if provided (for secondary map)
+    if (position != null) {
+      final (px, py) = position;
+      // Draw a small cross at position
+      for (int dy = -3; dy <= 3; dy++) {
+        for (int dx = -3; dx <= 3; dx++) {
+          if ((dx.abs() <= 1 && dy.abs() <= 3) ||
+              (dx.abs() <= 3 && dy.abs() <= 1)) {
+            final x = px + dx;
+            final y = py + dy;
+            if (x >= 0 && x < width && y >= 0 && y < height) {
+              overlay[y * width + x] = true;
+            }
+          }
+        }
+      }
+    }
+
+    return overlay;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -304,6 +500,11 @@ class _DebugPageSate extends State<DebugPage> {
           ElevatedButton(
             onPressed: _debugTranslateCommand,
             child: const Text("Debug Translate"),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: _debugNavigationCommand,
+            child: const Text("Debug Turn-by-Turn Navigation"),
           ),
         ],
       ),

@@ -7,6 +7,7 @@ import 'package:fahrplan/screens/settings_screen.dart';
 import 'package:fahrplan/screens/transcribe_screen.dart';
 import 'package:fahrplan/screens/mood_analysis_screen.dart';
 import 'package:fahrplan/screens/webview_screen.dart';
+import 'package:fahrplan/screens/navigation_screen.dart';
 import 'package:fahrplan/utils/ui_perfs.dart';
 import 'package:fahrplan/widgets/current_fahrplan.dart';
 import 'package:fahrplan/widgets/glass_status.dart';
@@ -210,6 +211,27 @@ class _HomePageState extends State<HomePage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => TranscribeScreen()),
+              );
+            },
+          ),
+          ListTile(
+            title: Row(
+              children: [
+                _ui.trainNerdMode
+                    ? Image(
+                        image: AssetImage('assets/icons/KP.png'),
+                        height: 20,
+                      )
+                    : Icon(Icons.navigation),
+                SizedBox(width: 10),
+                Text('Turn-by-Turn Navigation'),
+              ],
+            ),
+            trailing: Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => NavigationScreen()),
               );
             },
           ),

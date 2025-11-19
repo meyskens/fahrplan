@@ -2,6 +2,7 @@ import 'package:fahrplan/screens/settings/dashboard_screen.dart';
 import 'package:fahrplan/screens/settings/debug_screen.dart';
 import 'package:fahrplan/screens/settings/homeassistant_screen.dart';
 import 'package:fahrplan/screens/settings/llm_screen.dart';
+import 'package:fahrplan/screens/settings/mapbox_screen.dart';
 import 'package:fahrplan/screens/settings/notifications_screen.dart';
 import 'package:fahrplan/screens/settings/traewelling_screen.dart';
 import 'package:fahrplan/screens/settings/ui_settings.dart';
@@ -117,6 +118,22 @@ class SettingsPage extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => LLMSettingsPage()),
+              );
+            },
+          ),
+          ListTile(
+            title: Row(
+              children: [
+                Icon(Icons.map),
+                SizedBox(width: 10),
+                Text('Mapbox'),
+              ],
+            ),
+            trailing: Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => MapboxSettingsPage()),
               );
             },
           ),

@@ -150,6 +150,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.2.1"
+  benchmark:
+    dependency: transitive
+    description:
+      name: benchmark
+      sha256: cb3eeea01e3f054df76ee9775ca680f3afa5f19f39b2bb426ba78ba27654493b
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.0"
   bluez:
     dependency: transitive
     description:
@@ -350,6 +358,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.1.0"
+  dart_sort_queue:
+    dependency: transitive
+    description:
+      name: dart_sort_queue
+      sha256: f3353ba8b4850e072d3368757f62edb79af34a9703c3e3df9c59342721f5f5b1
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.2+3"
   dart_style:
     dependency: transitive
     description:
@@ -643,6 +659,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.0"
+  flutter_plugin_android_lifecycle:
+    dependency: transitive
+    description:
+      name: flutter_plugin_android_lifecycle
+      sha256: c2fe1001710127dfa7da89977a08d591398370d099aacdaa6d44da7eb14b8476
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.31"
   flutter_riverpod:
     dependency: transitive
     description:
@@ -702,6 +726,78 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.2.0"
+  geoclue:
+    dependency: transitive
+    description:
+      name: geoclue
+      sha256: c2a998c77474fc57aa00c6baa2928e58f4b267649057a1c76738656e9dbd2a7f
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.1"
+  geolocator:
+    dependency: "direct main"
+    description:
+      name: geolocator
+      sha256: "79939537046c9025be47ec645f35c8090ecadb6fe98eba146a0d25e8c1357516"
+      url: "https://pub.dev"
+    source: hosted
+    version: "14.0.2"
+  geolocator_android:
+    dependency: transitive
+    description:
+      name: geolocator_android
+      sha256: "179c3cb66dfa674fc9ccbf2be872a02658724d1c067634e2c427cf6df7df901a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.0.2"
+  geolocator_apple:
+    dependency: transitive
+    description:
+      name: geolocator_apple
+      sha256: dbdd8789d5aaf14cf69f74d4925ad1336b4433a6efdf2fce91e8955dc921bf22
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.13"
+  geolocator_linux:
+    dependency: transitive
+    description:
+      name: geolocator_linux
+      sha256: c4e966f0a7a87e70049eac7a2617f9e16fd4c585a26e4330bdfc3a71e6a721f3
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.3"
+  geolocator_platform_interface:
+    dependency: transitive
+    description:
+      name: geolocator_platform_interface
+      sha256: "30cb64f0b9adcc0fb36f628b4ebf4f731a2961a0ebd849f4b56200205056fe67"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.2.6"
+  geolocator_web:
+    dependency: transitive
+    description:
+      name: geolocator_web
+      sha256: b1ae9bdfd90f861fde8fd4f209c37b953d65e92823cb73c7dee1fa021b06f172
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.1.3"
+  geolocator_windows:
+    dependency: transitive
+    description:
+      name: geolocator_windows
+      sha256: "175435404d20278ffd220de83c2ca293b73db95eafbdc8131fe8609be1421eb6"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.5"
+  geotypes:
+    dependency: transitive
+    description:
+      name: geotypes
+      sha256: "5bedf57de92283133dd221e363812ef50eaaba414f0823b1974ef7d84b86991f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.2"
   glob:
     dependency: transitive
     description:
@@ -718,6 +814,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.2"
+  gsettings:
+    dependency: transitive
+    description:
+      name: gsettings
+      sha256: "1b0ce661f5436d2db1e51f3c4295a49849f03d304003a7ba177d01e3a858249c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.8"
   hive:
     dependency: "direct main"
     description:
@@ -862,6 +966,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.1.3-main.0"
+  mapbox_maps_flutter:
+    dependency: "direct main"
+    description:
+      name: mapbox_maps_flutter
+      sha256: "62d696ebee5485c53c0dbbc7181069a0b7a41fcc3263ef261e49be342f00ce7a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.12.0"
   matcher:
     dependency: transitive
     description:
@@ -1102,6 +1214,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.5.0"
+  rbush:
+    dependency: transitive
+    description:
+      name: rbush
+      sha256: "48b683421b4afb43a642f82c6aa31911e54f3069143d31c7d33cbe329df13403"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.1"
   riverpod:
     dependency: transitive
     description:
@@ -1315,6 +1435,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
+  sweepline_intersections:
+    dependency: transitive
+    description:
+      name: sweepline_intersections
+      sha256: a665c707200a4f07140a4029b41a7c4883beb3f04322cd8e08ebf650f69e1176
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.4"
   synchronized:
     dependency: transitive
     description:
@@ -1363,6 +1491,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.2"
+  turf:
+    dependency: transitive
+    description:
+      name: turf
+      sha256: "75347c45a5c1de805db7cb182286f05a3770e01546626c4dc292709d15cbe436"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.10"
+  turf_equality:
+    dependency: transitive
+    description:
+      name: turf_equality
+      sha256: f0f44ffe389547941358e0d3d4a747db2bd56115b32ff1cede5e5bdf3126a3e2
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.0"
+  turf_pip:
+    dependency: transitive
+    description:
+      name: turf_pip
+      sha256: ba4fd414baffd5d7b30880658ad6db82461c49ec023f8ffd0c23d398ad8b14be
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.2"
   typed_data:
     dependency: transitive
     description:

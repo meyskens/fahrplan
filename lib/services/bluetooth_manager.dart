@@ -6,6 +6,7 @@ import 'package:fahrplan/models/g1/bmp.dart';
 import 'package:fahrplan/models/g1/commands.dart';
 import 'package:fahrplan/models/g1/crc.dart';
 import 'package:fahrplan/models/g1/dashboard.dart';
+import 'package:fahrplan/models/g1/navigation.dart';
 import 'package:fahrplan/models/g1/setup.dart';
 import 'package:fahrplan/services/dashboard_controller.dart';
 import 'package:fahrplan/models/g1/note.dart';
@@ -371,12 +372,27 @@ class BluetoothManager {
     });
   }
 
-  Future<void> sendCommandToGlasses(List<int> command) async {
+  Future<void> sendCommandToGlasses(List<int> command,
+      {bool needsAck = true, Duration delay = Duration.zero}) async {
     if (leftGlass != null) {
-      await leftGlass!.sendDataWithAck(command);
+      if (needsAck) {
+        await leftGlass!.sendDataWithAck(command);
+      } else {
+        await leftGlass!.sendData(command);
+        if (delay > Duration.zero) {
+          await Future.delayed(delay);
+        }
+      }
     }
     if (rightGlass != null) {
-      await rightGlass!.sendDataWithAck(command);
+      if (needsAck) {
+        await rightGlass!.sendDataWithAck(command);
+      } else {
+        await rightGlass!.sendData(command);
+        if (delay > Duration.zero) {
+          await Future.delayed(delay);
+        }
+      }
     }
   }
 
@@ -718,7 +734,7 @@ class BluetoothManager {
     }
 
     try {
-      sendCommandToGlasses(bmpCommand);
+      sendCommandToGlasses(bmpCommand, needsAck: false);
       return bmpCommand;
     } catch (e) {
       return null;
@@ -825,6 +841,83 @@ class BluetoothManager {
     // for an unknown issue the microphone will not close when sent to the left side
     // to work around this we send the command to the right side only
     await rightGlass!.sendData([Commands.OPEN_MIC, subCommand]);
+  }
+
+  // Navigation methods
+
+  /// Initialize navigation mode on the glasses
+  Future<void> startNavigation() async {
+    final initCommand = Navigation().initData();
+    await sendCommandToGlasses(initCommand);
+  }
+
+  /// Send navigation directions to the glasses
+  Future<void> sendNavigationDirections({
+    required String totalDuration,
+    required String totalDistance,
+    required String direction,
+    required String distance,
+    required String speed,
+    required int directionTurn,
+    List<int>? customX,
+    int customY = 0x00,
+  }) async {
+    final directionCommand = Navigation().directionsData(
+      totalDuration: totalDuration,
+      totalDistance: totalDistance,
+      direction: direction,
+      distance: distance,
+      speed: speed,
+      directionTurn: directionTurn,
+      customX: customX,
+      customY: customY,
+    );
+    await sendCommandToGlasses(directionCommand);
+  }
+
+  /// Send primary navigation image (136x136 pixels)
+  Future<void> sendNavigationPrimaryImage({
+    required List<int> image,
+    required List<int> overlay,
+  }) async {
+    final imageCommands = Navigation().primaryImageData(
+      image: image,
+      overlay: overlay,
+    );
+    for (final command in imageCommands) {
+      await sendCommandToGlasses(command,
+          needsAck: false, delay: const Duration(milliseconds: 8));
+      await Future.delayed(
+          Duration(milliseconds: 8)); // Match Swift implementation
+    }
+  }
+
+  /// Send secondary navigation image (488x136 pixels)
+  Future<void> sendNavigationSecondaryImage({
+    required List<int> image,
+    required List<int> overlay,
+  }) async {
+    final imageCommands = Navigation().secondaryImageData(
+      image: image,
+      overlay: overlay,
+    );
+    for (final command in imageCommands) {
+      await sendCommandToGlasses(command, needsAck: false);
+      await Future.delayed(
+          Duration(milliseconds: 8)); // Match Swift implementation
+    }
+  }
+
+  /// Send navigation poller data
+  Future<void> sendNavigationPoller() async {
+    final pollerCommand = Navigation().pollerData();
+    await sendCommandToGlasses(pollerCommand);
+  }
+
+  /// End navigation mode
+  Future<void> endNavigation() async {
+    final endCommand = Navigation().endData();
+    await sendCommandToGlasses(endCommand);
   }
 
   Future<void> clearScreen() async {
