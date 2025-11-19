@@ -10,7 +10,7 @@ import 'package:fahrplan/models/g1/setup.dart';
 import 'package:fahrplan/services/dashboard_controller.dart';
 import 'package:fahrplan/models/g1/note.dart';
 import 'package:fahrplan/models/g1/notification.dart';
-
+import 'package:fahrplan/services/weather_broadcast_service.dart';
 import 'package:fahrplan/services/notifications_listener.dart';
 import 'package:fahrplan/services/stops_manager.dart';
 import 'package:fahrplan/utils/utils.dart';
@@ -49,6 +49,7 @@ class BluetoothManager {
   FahrplanDashboard fahrplanDashboard = FahrplanDashboard();
   DashboardController dashboardController = DashboardController();
   StopsManager stopsManager = StopsManager();
+  WeatherBroadcastService weatherBroadcastService = WeatherBroadcastService();
 
   Timer? _syncTimer;
   Completer<void>? _currentTextOperation;
@@ -88,6 +89,22 @@ class BluetoothManager {
     FlutterBluePlus.setLogLevel(LogLevel.none);
     await fahrplanDashboard.initialize();
     stopsManager.reload();
+
+    // Initialize weather broadcast service on Android
+    if (Platform.isAndroid) {
+      try {
+        await weatherBroadcastService.start();
+        weatherBroadcastService.addListener((weather) {
+          debugPrint(
+              'Weather updated via broadcast: ${weather.location} ${weather.currentTemp}K');
+          // Trigger a dashboard sync when weather is updated
+          _sync();
+        });
+      } catch (e) {
+        debugPrint('Failed to start weather broadcast service: $e');
+      }
+    }
+
     _syncTimer ??= Timer.periodic(const Duration(minutes: 1), (timer) {
       _sync();
     });
