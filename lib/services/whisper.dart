@@ -30,7 +30,8 @@ abstract class WhisperService {
 
   Future<String> transcribe(Uint8List voiceData);
   Future<void> transcribeLive(
-      Stream<Uint8List> voiceData, StreamController<String> out) async {}
+      Stream<Uint8List> voiceData, StreamController<String> out,
+      {bool finalOnly = false}) async {}
 }
 
 class WhisperLocalService implements WhisperService {
@@ -106,7 +107,8 @@ class WhisperLocalService implements WhisperService {
 
   @override
   Future<void> transcribeLive(
-      Stream<Uint8List> voiceData, StreamController<String> out) async {
+      Stream<Uint8List> voiceData, StreamController<String> out,
+      {bool finalOnly = false}) async {
     final int sampleRate = 16000;
     final int bytesPerSample = 2; // 16-bit audio
     final int chunkDurationSeconds = 5; // Increased to capture more context
@@ -592,7 +594,8 @@ class WhisperRemoteService implements WhisperService {
 
   @override
   Future<void> transcribeLive(
-      Stream<Uint8List> voiceData, StreamController<String> out) async {
+      Stream<Uint8List> voiceData, StreamController<String> out,
+      {bool finalOnly = false}) async {
     final useWebSocket = await getUseWebSocket();
 
     if (useWebSocket) {
@@ -1211,7 +1214,8 @@ class WhisperAzureSpeechService implements WhisperService {
 
   @override
   Future<void> transcribeLive(
-      Stream<Uint8List> voiceData, StreamController<String> out) async {
+      Stream<Uint8List> voiceData, StreamController<String> out,
+      {bool finalOnly = false}) async {
     final subscriptionKey = await getSubscriptionKey();
     final region = await getRegion();
     final language = _convertLanguageCode(await getLanguage());
@@ -1271,6 +1275,10 @@ class WhisperAzureSpeechService implements WhisperService {
               out.add(accumulatedTranscription);
               debugPrint('Azure final transcription: $text');
             } else if (type == 'partial' && text.isNotEmpty) {
+              if (finalOnly) {
+                // Ignore partial results if only final results are desired
+                return;
+              }
               // Partial/hypothesis result - send as real-time feedback
               // This replaces previous partial results until we get final
               String partialResult = accumulatedTranscription.isEmpty
