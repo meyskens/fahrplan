@@ -33,12 +33,7 @@ class WeatherReceiver : BroadcastReceiver() {
             editor.putString("flutter." + EXTRA_WEATHER_JSON, jsonData)
             editor.apply()
 
-            Log.d(TAG, "Weather data saved")
-            // log shared preferences data
-            val allEntries: Map<String, *> = sharedPreferences.all
-            for ((key, value) in allEntries) {
-                Log.d(TAG, "$key: $value")
-            }
+            Log.d(TAG, "Weather data saved")           
         } else {
             Log.e(TAG, "Context is null, cannot save weather data")
         }
