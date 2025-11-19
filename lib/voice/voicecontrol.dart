@@ -94,7 +94,8 @@ class Voicecontrol {
 
       // Start live transcription
       final whisperService = await WhisperService.service();
-      whisperService.transcribeLive(voiceData!.stream, textStream!);
+      whisperService.transcribeLive(voiceData!.stream, textStream!,
+          finalOnly: true);
       // Listen to transcription stream
       String lastTranscription = "";
 
