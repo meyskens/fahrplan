@@ -98,22 +98,32 @@ import Flutter
                 let conditionCode = mapWeatherCondition(currentWeather.condition)
                 
                 // Build weather data dictionary matching Gadgetbridge format
+                let currentTempKelvin = Int(currentWeather.temperature.converted(to: .kelvin).value)
+                let todayMaxTemp = Int((dailyForecast?.highTemperature.converted(to: .kelvin).value) ?? currentWeather.temperature.converted(to: .kelvin).value)
+                let todayMinTemp = Int((dailyForecast?.lowTemperature.converted(to: .kelvin).value) ?? currentWeather.temperature.converted(to: .kelvin).value)
+                let windSpeed = Int(currentWeather.wind.speed.converted(to: .kilometersPerHour).value)
+                let windDirection = Int(currentWeather.wind.direction.value)
+                let precipProbability = Int((currentWeather.precipitationIntensity.value > 0 ? 1.0 : 0.0) * 100)
+                let pressure = Int(currentWeather.pressure.converted(to: .millibars).value)
+                let cloudCover = Int(currentWeather.cloudCover * 100)
+                let feelsLikeTemp = Int(currentWeather.apparentTemperature.converted(to: .kelvin).value)
+                
                 var weatherData: [String: Any] = [
                     "timestamp": Int(Date().timeIntervalSince1970),
                     "location": "Current Location",
-                    "currentTemp": Int(currentWeather.temperature.converted(to: .kelvin).value),
+                    "currentTemp": currentTempKelvin,
                     "currentConditionCode": conditionCode,
                     "currentCondition": currentWeather.condition.description,
                     "currentHumidity": Int(currentWeather.humidity * 100),
-                    "todayMaxTemp": Int((dailyForecast?.highTemperature.converted(to: .kelvin).value) ?? currentWeather.temperature.converted(to: .kelvin).value),
-                    "todayMinTemp": Int((dailyForecast?.lowTemperature.converted(to: .kelvin).value) ?? currentWeather.temperature.converted(to: .kelvin).value),
-                    "windSpeed": Int(currentWeather.wind.speed.converted(to: .kilometersPerHour).value),
-                    "windDirection": Int(currentWeather.wind.direction.value),
+                    "todayMaxTemp": todayMaxTemp,
+                    "todayMinTemp": todayMinTemp,
+                    "windSpeed": windSpeed,
+                    "windDirection": windDirection,
                     "uvIndex": currentWeather.uvIndex.value,
-                    "precipProbability": Int((currentWeather.precipitationIntensity.value > 0 ? 1.0 : 0.0) * 100),
-                    "pressure": Int(currentWeather.pressure.converted(to: .millibars).value),
-                    "cloudCover": Int(currentWeather.cloudCover * 100),
-                    "feelsLikeTemp": Int(currentWeather.apparentTemperature.converted(to: .kelvin).value),
+                    "precipProbability": precipProbability,
+                    "pressure": pressure,
+                    "cloudCover": cloudCover,
+                    "feelsLikeTemp": feelsLikeTemp,
                     "isCurrentLocation": 1,
                     "latitude": location.coordinate.latitude,
                     "longitude": location.coordinate.longitude
@@ -192,7 +202,7 @@ import Flutter
             return 300 // Drizzle
         case .rain, .heavyRain:
             return 500 // Rain
-        case .showers:
+        case .rainShowers, .showers:
             return 521 // Shower rain
         case .thunderstorms:
             return 200 // Thunderstorm
