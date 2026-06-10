@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:fahrplan/utils/ui_perfs.dart';
 import 'package:flutter/material.dart';
 
@@ -10,6 +12,7 @@ class UiSettingsPage extends StatefulWidget {
 
 class UiSettingsPageState extends State<UiSettingsPage> {
   late bool trainNerdmode;
+  late bool backgroundAudioKeepAlive;
   late UiPerfs _uiPerfs;
 
   @override
@@ -24,6 +27,7 @@ class UiSettingsPageState extends State<UiSettingsPage> {
 
     setState(() {
       trainNerdmode = _uiPerfs.trainNerdMode;
+      backgroundAudioKeepAlive = _uiPerfs.backgroundAudioKeepAlive;
     });
   }
 
@@ -48,6 +52,21 @@ class UiSettingsPageState extends State<UiSettingsPage> {
                 });
               },
             ),
+            if (Platform.isIOS || Platform.isAndroid)
+              SwitchListTile(
+                title: Text('Background Audio Keep-Alive'),
+                subtitle: Text(
+                  'Play silent audio to maintain BLE connection when app is backgrounded. '
+                  'May increase battery usage.',
+                ),
+                value: _uiPerfs.backgroundAudioKeepAlive,
+                onChanged: (bool value) {
+                  _uiPerfs.backgroundAudioKeepAlive = value;
+                  setState(() {
+                    backgroundAudioKeepAlive = value;
+                  });
+                },
+              ),
           ],
         ),
       ),

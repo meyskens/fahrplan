@@ -16,6 +16,7 @@ import 'package:fahrplan/utils/ui_perfs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'screens/home_screen.dart';
@@ -27,6 +28,10 @@ late AudioHandler _audioHandler;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Enable iOS state restoration for BLE - must be done before any BLE operations
+  // This allows the app to be woken up by BLE events even after being killed by iOS
+  await FlutterBluePlus.setOptions(restoreState: true);
 
   flutterLocalNotificationsPlugin.initialize(
     InitializationSettings(
@@ -69,19 +74,58 @@ void main() async {
 
   runApp(const App());
 
-  _audioHandler.play();
+  // Only start audio handler if background audio keep-alive is enabled
+  if (UiPerfs.singleton.backgroundAudioKeepAlive) {
+    _audioHandler.play();
+  }
 }
 
 void backgroundMain() {
   WidgetsFlutterBinding.ensureInitialized();
 }
 
-class AppRetainWidget extends StatelessWidget {
-  AppRetainWidget({super.key, required this.child});
+class AppLifecycleObserver extends WidgetsBindingObserver {
+  static const MethodChannel _settingsChannel =
+      MethodChannel('dev.maartje.fahrplan/settings');
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (Platform.isIOS) {
+      if (state == AppLifecycleState.paused) {
+        // App is going to background - notify iOS native code of audio setting
+        final enabled = UiPerfs.singleton.backgroundAudioKeepAlive;
+        _settingsChannel.invokeMethod('setBackgroundAudioEnabled', {
+          'enabled': enabled,
+        });
+      }
+    }
+  }
+}
+
+class AppRetainWidget extends StatefulWidget {
+  const AppRetainWidget({super.key, required this.child});
 
   final Widget child;
 
+  @override
+  State<AppRetainWidget> createState() => _AppRetainWidgetState();
+}
+
+class _AppRetainWidgetState extends State<AppRetainWidget> {
   final _channel = const MethodChannel('dev.maartje.fahrplan/app_retain');
+  final _lifecycleObserver = AppLifecycleObserver();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(_lifecycleObserver);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(_lifecycleObserver);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +142,7 @@ class AppRetainWidget extends StatelessWidget {
           return true;
         }
       },
-      child: child,
+      child: widget.child,
     );
   }
 }
@@ -276,6 +320,11 @@ class MyAudioHandler extends BaseAudioHandler
   // mix in default seek callback implementations
 
   Future<void> fakeMediaPlayback() async {
+    // Only start audio playback if background audio keep-alive is enabled
+    if (!UiPerfs.singleton.backgroundAudioKeepAlive) {
+      return;
+    }
+
     playbackState.add(PlaybackState(
       controls: const [],
       systemActions: const {},

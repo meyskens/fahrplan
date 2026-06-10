@@ -165,24 +165,50 @@ class BluetoothManager {
     final leftUid = await _getLastG1UsedUid(GlassSide.left);
     final rightUid = await _getLastG1UsedUid(GlassSide.right);
 
+    // On iOS, device identifiers can change periodically (privacy feature)
+    // If stored UIDs don't work, we'll need to scan again
+    bool leftConnected = false;
+    bool rightConnected = false;
+
     if (leftUid != null) {
-      leftGlass = Glass(
-        name: await _getLastG1UsedName(GlassSide.left) ?? 'Left Glass',
-        device: BluetoothDevice(remoteId: DeviceIdentifier(leftUid)),
-        side: GlassSide.left,
-      );
-      await leftGlass!.connect();
-      _setReconnect(leftGlass!);
+      try {
+        leftGlass = Glass(
+          name: await _getLastG1UsedName(GlassSide.left) ?? 'Left Glass',
+          device: BluetoothDevice(remoteId: DeviceIdentifier(leftUid)),
+          side: GlassSide.left,
+        );
+        await leftGlass!.connect();
+        _setReconnect(leftGlass!);
+        leftConnected = true;
+      } catch (e) {
+        debugPrint('Failed to reconnect to left glass from storage: $e');
+        // On iOS, the stored UUID might be stale - will need fresh scan
+        leftGlass = null;
+      }
     }
 
     if (rightUid != null) {
-      rightGlass = Glass(
-        name: await _getLastG1UsedName(GlassSide.right) ?? 'Right Glass',
-        device: BluetoothDevice(remoteId: DeviceIdentifier(rightUid)),
-        side: GlassSide.right,
-      );
-      await rightGlass!.connect();
-      _setReconnect(rightGlass!);
+      try {
+        rightGlass = Glass(
+          name: await _getLastG1UsedName(GlassSide.right) ?? 'Right Glass',
+          device: BluetoothDevice(remoteId: DeviceIdentifier(rightUid)),
+          side: GlassSide.right,
+        );
+        await rightGlass!.connect();
+        _setReconnect(rightGlass!);
+        rightConnected = true;
+      } catch (e) {
+        debugPrint('Failed to reconnect to right glass from storage: $e');
+        // On iOS, the stored UUID might be stale - will need fresh scan
+        rightGlass = null;
+      }
+    }
+
+    // If we couldn't reconnect on iOS, the stored UUIDs may be stale
+    // The app should trigger a scan when user opens it
+    if (Platform.isIOS && (!leftConnected || !rightConnected)) {
+      debugPrint('iOS: Some glasses could not reconnect from stored UUIDs. '
+          'Will need fresh scan when app is foregrounded.');
     }
   }
 
@@ -227,9 +253,17 @@ class BluetoothManager {
       }
     });
 
+    // iOS background scanning requires service UUID filtering
+    // The G1 uses Nordic UART Service (NUS)
+    List<Guid> withServices = [];
+    if (Platform.isIOS) {
+      withServices = [Guid('6e400001-b5a3-f393-e0a9-e50e24dcca9e')];
+    }
+
     await FlutterBluePlus.startScan(
       timeout: const Duration(seconds: 30),
       androidUsesFineLocation: true,
+      withServices: withServices,
     );
 
     // Listen for scan results
@@ -299,12 +333,25 @@ class BluetoothManager {
   }
 
   void _setReconnect(Glass glass) {
+    // Note: On iOS, autoConnect handles reconnection automatically
+    // This listener is mainly for logging and handling edge cases
     glass.device.connectionState.listen((BluetoothConnectionState state) {
       debugPrint('[${glass.side} Glass] Connection state: $state');
       if (state == BluetoothConnectionState.disconnected) {
         debugPrint(
             '[${glass.side} Glass] Disconnected, attempting to reconnect...');
-        glass.connect();
+        // On Android, we need to manually reconnect
+        // On iOS, autoConnect handles this, but we retry anyway for robustness
+        if (Platform.isAndroid) {
+          glass.connect();
+        } else {
+          // On iOS, give autoConnect a moment, then check if we need to reconnect
+          Future.delayed(const Duration(seconds: 3), () {
+            if (!glass.device.isConnected) {
+              glass.connect();
+            }
+          });
+        }
       }
     });
   }

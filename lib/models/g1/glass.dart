@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:fahrplan/models/g1/commands.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -17,8 +19,14 @@ class Glass {
   BluetoothCharacteristic? uartRx;
 
   StreamSubscription<List<int>>? notificationSubscription;
+  StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
   Timer? heartbeatTimer;
   int heartbeatSeq = 0;
+
+  // Reactive heartbeat tracking - for iOS background compatibility
+  DateTime _lastActivityTime = DateTime.now();
+  static const Duration _heartbeatInterval = Duration(seconds: 28);
+  static const Duration _iosHeartbeatInterval = Duration(seconds: 25);
 
   // ACK tracking
   final Map<int, Completer<void>> _ackCompleters = {};
@@ -35,15 +43,55 @@ class Glass {
 
   Future<void> connect() async {
     try {
-      await device.connect();
+      // Use autoConnect for iOS - allows reconnection even when app is backgrounded
+      // autoConnect is incompatible with specifying MTU in the same call
+      await device.connect(
+        autoConnect: Platform.isIOS,
+        mtu: null, // Request MTU separately after connection
+      );
+
+      // Wait for connection to be established
+      await device.connectionState
+          .where((s) => s == BluetoothConnectionState.connected)
+          .first;
+
       await discoverServices();
-      device.requestMtu(251);
-      device.requestConnectionPriority(
-          connectionPriorityRequest: ConnectionPriority.high);
-      startHeartbeat();
+
+      // Request MTU after connection (required for G1)
+      await device.requestMtu(251);
+
+      if (Platform.isAndroid) {
+        device.requestConnectionPriority(
+            connectionPriorityRequest: ConnectionPriority.high);
+      }
+
+      // Start reactive heartbeat - works in background on iOS by piggybacking on incoming packets
+      startReactiveHeartbeat();
+
+      // Set up connection state listener for auto-reconnect
+      _setupConnectionListener();
     } catch (e) {
       debugPrint('[$side Glass] Connection error: $e');
     }
+  }
+
+  void _setupConnectionListener() {
+    _connectionSubscription?.cancel();
+    _connectionSubscription = device.connectionState.listen((state) {
+      debugPrint('[$side Glass] Connection state: $state');
+      if (state == BluetoothConnectionState.disconnected) {
+        debugPrint('[$side Glass] Disconnected, will auto-reconnect if needed');
+        // On iOS, autoConnect handles reconnection automatically
+        // On Android, we may need to trigger reconnect
+        if (Platform.isAndroid) {
+          Future.delayed(const Duration(seconds: 2), () {
+            if (!device.isConnected) {
+              connect();
+            }
+          });
+        }
+      }
+    });
   }
 
   Future<void> discoverServices() async {
@@ -86,6 +134,12 @@ class Glass {
   }
 
   void handleNotification(List<int> data) async {
+    // Update activity time for reactive heartbeat - critical for iOS background
+    _lastActivityTime = DateTime.now();
+
+    // Check if we need to send a heartbeat based on elapsed time
+    _checkAndSendReactiveHeartbeat();
+
     //String hexData =
     //    data.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
     //debugPrint('[$side Glass] Received data: $hexData');
@@ -105,10 +159,33 @@ class Glass {
     await reciever.receiveHandler(side, data);
   }
 
+  /// Reactive heartbeat: sends heartbeat only when needed based on activity
+  /// This is critical for iOS background operation where timers don't fire
+  void _checkAndSendReactiveHeartbeat() {
+    final elapsed = DateTime.now().difference(_lastActivityTime);
+    final interval =
+        Platform.isIOS ? _iosHeartbeatInterval : _heartbeatInterval;
+
+    if (elapsed >= interval) {
+      // Time to send a heartbeat
+      _sendHeartbeatPacket();
+    }
+  }
+
+  void _sendHeartbeatPacket() {
+    if (device.isConnected) {
+      List<int> heartbeatData = _constructHeartbeat(heartbeatSeq++);
+      sendData(heartbeatData);
+      _lastActivityTime = DateTime.now();
+    }
+  }
+
   Future<void> sendData(List<int> data) async {
     if (uartTx != null) {
       try {
         await uartTx!.write(data, withoutResponse: false);
+        // Update activity time when sending data - for reactive heartbeat
+        _lastActivityTime = DateTime.now();
         //debugPrint(
         //    'Sent data to $side glass: ${data.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
       } catch (e) {
@@ -169,19 +246,30 @@ class Glass {
     ];
   }
 
-  void startHeartbeat() {
-    const heartbeatInterval = Duration(seconds: 5);
-    heartbeatTimer = Timer.periodic(heartbeatInterval, (timer) async {
-      if (device.isConnected) {
-        List<int> heartbeatData = _constructHeartbeat(heartbeatSeq++);
-        await sendData(heartbeatData);
-      }
-    });
+  /// Reactive heartbeat that works in iOS background
+  /// Uses incoming BLE notifications to trigger heartbeats instead of timers
+  void startReactiveHeartbeat() {
+    // Cancel any existing timer
+    heartbeatTimer?.cancel();
+
+    // On Android, we can use a timer since background execution is more permissive
+    // On iOS, we rely on reactive heartbeats triggered by incoming notifications
+    if (Platform.isAndroid) {
+      const heartbeatInterval = Duration(seconds: 5);
+      heartbeatTimer = Timer.periodic(heartbeatInterval, (timer) async {
+        if (device.isConnected) {
+          _sendHeartbeatPacket();
+        }
+      });
+    }
+    // On iOS, heartbeats are sent reactively when we receive notifications
+    // This works because incoming BLE packets wake the app for ~10 seconds
   }
 
   Future<void> disconnect() async {
     await device.disconnect();
     await notificationSubscription?.cancel();
+    await _connectionSubscription?.cancel();
     heartbeatTimer?.cancel();
     debugPrint('Disconnected from $side glass.');
   }
