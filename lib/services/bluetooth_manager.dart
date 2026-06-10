@@ -220,6 +220,7 @@ class BluetoothManager {
       await _requestPermissions();
     } catch (e) {
       onUpdate(e.toString());
+      return; // Stop execution if permissions are not granted
     }
 
     if (!await FlutterBluePlus.isAvailable) {
