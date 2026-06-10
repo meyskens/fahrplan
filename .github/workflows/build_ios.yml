@@ -3,7 +3,7 @@ name: Build and Upload iOS
 on:
   push:
     branches:
-      - main
+      - ios-dev
 
 jobs:
   build:
