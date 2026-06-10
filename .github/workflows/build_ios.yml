@@ -37,6 +37,5 @@ jobs:
         run: |
           flutter clean
           flutter pub get
-          flutter gen-l10n
           flutter build ipa --release --build-number=${{ github.run_number }}
           xcrun altool --upload-app --type ios -f build/ios/ipa/*.ipa --apiKey "$APPSTORE_API_KEY_ID" --apiIssuer "$APPSTORE_API_ISSUER_ID"
