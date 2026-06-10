@@ -171,7 +171,6 @@ import Flutter
                         dayData["minTemp"] = Int(day.lowTemperature.converted(to: .kelvin).value)
                         dayData["maxTemp"] = Int(day.highTemperature.converted(to: .kelvin).value)
                         dayData["conditionCode"] = mapWeatherCondition(day.condition)
-                        dayData["humidity"] = Int(day.humidity * 100)
                         dayData["windSpeed"] = Int(day.wind.speed.converted(to: .kilometersPerHour).value)
                         dayData["windDirection"] = Int(day.wind.direction.value)
                         dayData["uvIndex"] = day.uvIndex.value
