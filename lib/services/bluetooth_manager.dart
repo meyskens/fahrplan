@@ -71,6 +71,9 @@ class BluetoothManager {
   int _retryCount = 0;
   static const int maxRetries = 3;
 
+  StreamSubscription<List<ScanResult>>? _scanResultsSubscription;
+  StreamSubscription<bool>? _isScanningSubscription;
+
   Future<String?> _getLastG1UsedUid(GlassSide side) async {
     final pref = await SharedPreferences.getInstance();
     return pref.getString(side == GlassSide.left ? 'left' : 'right');
@@ -355,6 +358,10 @@ class BluetoothManager {
     await FlutterBluePlus.stopScan();
     debugPrint('Starting new scan attempt ${_retryCount + 1}/$maxRetries');
 
+    // Cancel existing subscriptions to prevent duplicate listeners on retry
+    await _scanResultsSubscription?.cancel();
+    await _isScanningSubscription?.cancel();
+
     // Set scan timeout
     _scanTimer?.cancel();
     _scanTimer = Timer(const Duration(seconds: 30), () {
@@ -363,21 +370,13 @@ class BluetoothManager {
       }
     });
 
-    // iOS background scanning requires service UUID filtering
-    // The G1 uses Nordic UART Service (NUS)
-    List<Guid> withServices = [];
-    if (Platform.isIOS) {
-      withServices = [Guid('6e400001-b5a3-f393-e0a9-e50e24dcca9e')];
-    }
-
     await FlutterBluePlus.startScan(
       timeout: const Duration(seconds: 30),
       androidUsesFineLocation: true,
-      withServices: withServices,
     );
 
     // Listen for scan results
-    FlutterBluePlus.scanResults.listen(
+    _scanResultsSubscription = FlutterBluePlus.scanResults.listen(
       (results) {
         for (ScanResult result in results) {
           String deviceName = result.device.name;
@@ -396,7 +395,7 @@ class BluetoothManager {
     );
 
     // Monitor scanning state
-    FlutterBluePlus.isScanning.listen((isScanning) {
+    _isScanningSubscription = FlutterBluePlus.isScanning.listen((isScanning) {
       debugPrint('Scanning state changed: $isScanning');
       if (!isScanning && _isScanning) {
         _handleScanComplete(onUpdate);
@@ -523,6 +522,10 @@ class BluetoothManager {
 
   void stopScanning() {
     _scanTimer?.cancel();
+    _scanResultsSubscription?.cancel();
+    _isScanningSubscription?.cancel();
+    _scanResultsSubscription = null;
+    _isScanningSubscription = null;
     FlutterBluePlus.stopScan().then((_) {
       debugPrint('Stopped scanning');
       _isScanning = false;
