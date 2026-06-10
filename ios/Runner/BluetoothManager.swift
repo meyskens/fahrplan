@@ -312,6 +312,8 @@ import Flutter
             self.rightPeripheral?.discoverServices([UARTServiceUUID])
         }
 
+        let writeData = flutterData.data
+        
         if lr == "L" {
             if self.leftWChar != nil {
                 pendingWrites = 1

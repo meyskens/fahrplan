@@ -2,6 +2,7 @@ import WeatherKit
 import CoreLocation
 import Flutter
 
+@available(iOS 16.0, *)
 @objc public class WeatherKitManager: NSObject {
     @objc public static let shared = WeatherKitManager()
     
@@ -109,7 +110,7 @@ import Flutter
                     "windSpeed": Int(currentWeather.wind.speed.converted(to: .kilometersPerHour).value),
                     "windDirection": Int(currentWeather.wind.direction.value),
                     "uvIndex": currentWeather.uvIndex.value,
-                    "precipProbability": Int((currentWeather.precipitationChance) * 100),
+                    "precipProbability": Int((currentWeather.precipitationIntensity.value > 0 ? 1.0 : 0.0) * 100),
                     "pressure": Int(currentWeather.pressure.converted(to: .millibars).value),
                     "cloudCover": Int(currentWeather.cloudCover * 100),
                     "feelsLikeTemp": Int(currentWeather.apparentTemperature.converted(to: .kelvin).value),
@@ -129,7 +130,7 @@ import Flutter
                             "windSpeed": Int(hour.wind.speed.converted(to: .kilometersPerHour).value),
                             "windDirection": Int(hour.wind.direction.value),
                             "uvIndex": hour.uvIndex.value,
-                            "precipProbability": Int(hour.precipitationChance * 100)
+                            "precipProbability": Int((hour.precipitationChance ?? 0) * 100)
                         ]
                     }
                     weatherData["hourly"] = hourlyData
@@ -147,7 +148,7 @@ import Flutter
                             "windSpeed": Int(day.wind.speed.converted(to: .kilometersPerHour).value),
                             "windDirection": Int(day.wind.direction.value),
                             "uvIndex": day.uvIndex.value,
-                            "precipProbability": Int(day.precipitationChance * 100),
+                            "precipProbability": Int((day.precipitationChance ?? 0) * 100),
                             "sunRise": day.sun.sunrise != nil ? Int(day.sun.sunrise!.timeIntervalSince1970) : nil,
                             "sunSet": day.sun.sunset != nil ? Int(day.sun.sunset!.timeIntervalSince1970) : nil
                         ].compactMapValues { $0 }
@@ -229,18 +230,6 @@ import Flutter
             return 611 // Sleet
         case .scatteredThunderstorms, .isolatedThunderstorms:
             return 210 // Light thunderstorm
-        case .scatteredSnowstorms, .isolatedSnowstorms:
-            return 600 // Snow
-        case .scatteredShowers, .isolatedShowers:
-            return 521 // Shower rain
-        case .scatteredRainstorms, .isolatedRainstorms:
-            return 501 // Moderate rain
-        case .blowingDust, .blowingSnow:
-            return 731 // Dust/sand
-        case .denseFog:
-            return 741 // Fog
-        case .freezingFog:
-            return 741 // Fog
         @unknown default:
             return 800 // Clear
         }
@@ -248,6 +237,7 @@ import Flutter
 }
 
 // MARK: - CLLocationManagerDelegate
+@available(iOS 16.0, *)
 extension WeatherKitManager: CLLocationManagerDelegate {
     public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         // Location updated, fetch weather

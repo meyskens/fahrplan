@@ -16,6 +16,10 @@
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		A1B2C3D41E8E89220040F4C2 /* WeatherKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D31E8E89220040F4C2 /* WeatherKitManager.swift */; };
 		A1B2C3D51E8E89220040F4C3 /* WeatherKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1B2C3D21E8E89220040F4C2 /* WeatherKit.framework */; };
+		B1C2D3E41F9F90330051A5D3 /* BluetoothManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E31F9F90330051A5D3 /* BluetoothManager.swift */; };
+		B1C2D3E51F9F90330051A5D4 /* ServiceIdentifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E21F9F90330051A5D4 /* ServiceIdentifiers.swift */; };
+		B1C2D3E61F9F90330051A5D5 /* GattProtocal.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E11F9F90330051A5D5 /* GattProtocal.swift */; };
+		B1C2D3E71F9F90330051A5D6 /* SpeechStreamRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E01F9F90330051A5D6 /* SpeechStreamRecognizer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,6 +63,10 @@
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1B2C3D21E8E89220040F4C2 /* WeatherKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WeatherKit.framework; path = System/Library/Frameworks/WeatherKit.framework; sourceTree = SDKROOT; };
 		A1B2C3D31E8E89220040F4C2 /* WeatherKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherKitManager.swift; sourceTree = "<group>"; };
+		B1C2D3E01F9F90330051A5D6 /* SpeechStreamRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechStreamRecognizer.swift; sourceTree = "<group>"; };
+		B1C2D3E11F9F90330051A5D5 /* GattProtocal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GattProtocal.swift; sourceTree = "<group>"; };
+		B1C2D3E21F9F90330051A5D4 /* ServiceIdentifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceIdentifiers.swift; sourceTree = "<group>"; };
+		B1C2D3E31F9F90330051A5D3 /* BluetoothManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -124,6 +132,10 @@
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				A1B2C3D31E8E89220040F4C2 /* WeatherKitManager.swift */,
+				B1C2D3E31F9F90330051A5D3 /* BluetoothManager.swift */,
+				B1C2D3E21F9F90330051A5D4 /* ServiceIdentifiers.swift */,
+				B1C2D3E11F9F90330051A5D5 /* GattProtocal.swift */,
+				B1C2D3E01F9F90330051A5D6 /* SpeechStreamRecognizer.swift */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -286,6 +298,10 @@
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				A1B2C3D41E8E89220040F4C2 /* WeatherKitManager.swift in Sources */,
+				B1C2D3E41F9F90330051A5D3 /* BluetoothManager.swift in Sources */,
+				B1C2D3E51F9F90330051A5D4 /* ServiceIdentifiers.swift in Sources */,
+				B1C2D3E61F9F90330051A5D5 /* GattProtocal.swift in Sources */,
+				B1C2D3E71F9F90330051A5D6 /* SpeechStreamRecognizer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -362,7 +378,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = (
 					"-fmodules",
@@ -492,7 +508,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -547,7 +563,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = (
 					"-fmodules",
