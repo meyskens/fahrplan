@@ -51,6 +51,8 @@
 		<string>This app needs access to microphone for voice commands and audio recording functionality.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Connect to Even G1 smartglasses left and right arms for data and control.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Connect to Even G1 smartglasses left and right arms for data and control.</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>This app needs access to calendars to display your events and travel plans.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
