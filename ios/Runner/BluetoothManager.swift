@@ -141,7 +141,7 @@ import Flutter
     }
 
     // MARK: - CBCentralManagerDelegate Methods
-    func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
+    public func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
         guard let name = peripheral.name else { return }
         let components = name.components(separatedBy: "_")
         guard components.count > 1, let channelNumber = components[safe: 1] else { return }
@@ -162,7 +162,7 @@ import Flutter
         }
     }
 
-    func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+    public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         guard let deviceName = currentConnectingDeviceName else { return }
         guard let peripheralPair = pairedDevices[deviceName] else { return }
 
@@ -204,11 +204,11 @@ import Flutter
         }
     }
     
-    func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?){
+    public func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?){
         print("didDisconnectPeripheral-----peripheral-----\(peripheral)--")
     }
     
-    func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+    public func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         print("peripheral------\(peripheral)-----didDiscoverServices--------")
         guard let services = peripheral.services else { return }
         
@@ -219,7 +219,7 @@ import Flutter
         }
     }
     
-    func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
+    public func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         print("peripheral------\(peripheral)-----didDiscoverCharacteristicsFor----service----\(service)----")
         guard let characteristics = service.characteristics else { return }
 
@@ -255,7 +255,7 @@ import Flutter
         }
     }
         
-    func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
+    public func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
         if let error = error {
             print("subscribe fail: \(error)")
             return
@@ -267,7 +267,7 @@ import Flutter
         }
     }
 
-    func centralManagerDidUpdateState(_ central: CBCentralManager) {
+    public func centralManagerDidUpdateState(_ central: CBCentralManager) {
         switch central.state {
         case .poweredOn:
             print("Bluetooth is powered on.")
@@ -278,6 +278,14 @@ import Flutter
         }
     }
     
+    // Internal writeData method for use within the class (no result callback needed)
+    private func writeData(writeData: Data, lr: String) {
+        if lr == "L" && self.leftWChar != nil {
+            self.leftPeripheral?.writeValue(writeData, for: self.leftWChar!, type: .withResponse)
+        } else if lr == "R" && self.rightWChar != nil {
+            self.rightPeripheral?.writeValue(writeData, for: self.rightWChar!, type: .withResponse)
+        }
+    }
     
     // Completion handlers for write operations (to match Android's withoutResponse: false behavior)
     private var writeCompletionHandlers: [CBUUID: () -> Void] = [:]
@@ -365,7 +373,7 @@ import Flutter
         }
     }
     
-    func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
+    public func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
         // Call completion handler if one exists for this characteristic
         if let completion = writeCompletionHandlers[characteristic.uuid] {
             completion()
@@ -378,14 +386,14 @@ import Flutter
         }
     }
     
-    func peripheral(_ peripheral: CBPeripheral, didWriteValueFor descriptor: CBDescriptor, error: Error?) {
+    public func peripheral(_ peripheral: CBPeripheral, didWriteValueFor descriptor: CBDescriptor, error: Error?) {
         guard error == nil else {
             print("didWriteValueFor----------- \(error!)")
             return
         }
     }
 
-    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
+    public func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         //print("didUpdateValueFor--------peripheral-----\(peripheral.identifier.uuidString)--characteristic.value----\(characteristic.value)--")
         let data = characteristic.value
         self.getCommandValue(data: data!,cbPeripheral: peripheral)
