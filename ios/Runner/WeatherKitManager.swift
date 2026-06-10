@@ -103,7 +103,8 @@ import Flutter
                 let todayMinTemp = Int((dailyForecast?.lowTemperature.converted(to: .kelvin).value) ?? currentWeather.temperature.converted(to: .kelvin).value)
                 let windSpeed = Int(currentWeather.wind.speed.converted(to: .kilometersPerHour).value)
                 let windDirection = Int(currentWeather.wind.direction.value)
-                let precipProbability = Int((currentWeather.precipitationIntensity.value > 0 ? 1.0 : 0.0) * 100)
+                let hasPrecipitation = currentWeather.precipitationIntensity.value > 0
+                let precipProbability = hasPrecipitation ? 100 : 0
                 let pressure = Int(currentWeather.pressure.converted(to: .millibars).value)
                 let cloudCover = Int(currentWeather.cloudCover * 100)
                 let feelsLikeTemp = Int(currentWeather.apparentTemperature.converted(to: .kelvin).value)
@@ -202,7 +203,7 @@ import Flutter
             return 300 // Drizzle
         case .rain, .heavyRain:
             return 500 // Rain
-        case .rainShowers, .showers:
+        case .showers:
             return 521 // Shower rain
         case .thunderstorms:
             return 200 // Thunderstorm
