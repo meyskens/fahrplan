@@ -1,8 +1,8 @@
 import CoreBluetooth
 import Flutter
 
-class BluetoothManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
-    static let shared = BluetoothManager(channel: FlutterMethodChannel())
+@objc public class BluetoothManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
+    @objc public static let shared = BluetoothManager(channel: FlutterMethodChannel())
     
     var centralManager: CBCentralManager!
     var pairedDevices: [String: (CBPeripheral?, CBPeripheral?)] = [:]
@@ -58,22 +58,73 @@ class BluetoothManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate
     func connectToDevice(deviceName: String, result: @escaping FlutterResult) {
         centralManager.stopScan()
 
-        guard let peripheralPair = pairedDevices[deviceName] else {
-            result(FlutterError(code: "DeviceNotFound", message: "Device not found", details: nil))
+        // First try to get from pairedDevices (if scan was done)
+        if let peripheralPair = pairedDevices[deviceName] {
+            guard let leftPeripheral = peripheralPair.0, let rightPeripheral = peripheralPair.1 else {
+                result(FlutterError(code: "PeripheralNotFound", message: "One or both peripherals are not found", details: nil))
+                return
+            }
+            currentConnectingDeviceName = deviceName
+            centralManager.connect(leftPeripheral, options: nil)
+            centralManager.connect(rightPeripheral, options: nil)
+            result("Connecting to \(deviceName)...")
             return
         }
 
-        guard let leftPeripheral = peripheralPair.0, let rightPeripheral = peripheralPair.1 else {
-            result(FlutterError(code: "PeripheralNotFound", message: "One or both peripherals are not found", details: nil))
+        // If not in pairedDevices, deviceName might be a direct peripheral identifier
+        // Try to retrieve by UUID if it's a valid UUID string
+        if let uuid = UUID(uuidString: deviceName) {
+            let peripherals = centralManager.retrievePeripherals(withIdentifiers: [uuid])
+            if let peripheral = peripherals.first {
+                currentConnectingDeviceName = peripheral.name ?? deviceName
+                centralManager.connect(peripheral, options: nil)
+                result("Connecting to \(deviceName)...")
+                return
+            }
+        }
+
+        result(FlutterError(code: "DeviceNotFound", message: "Device not found: \(deviceName)", details: nil))
+    }
+
+    func connectToPeripherals(leftUUID: String?, rightUUID: String?, result: @escaping FlutterResult) {
+        centralManager.stopScan()
+
+        var leftPeripheral: CBPeripheral?
+        var rightPeripheral: CBPeripheral?
+
+        if let leftUUIDStr = leftUUID, let leftUUID = UUID(uuidString: leftUUIDStr) {
+            let peripherals = centralManager.retrievePeripherals(withIdentifiers: [leftUUID])
+            leftPeripheral = peripherals.first
+            if leftPeripheral != nil {
+                self.leftPeripheral = leftPeripheral
+                self.leftUUIDStr = leftUUIDStr
+            }
+        }
+
+        if let rightUUIDStr = rightUUID, let rightUUID = UUID(uuidString: rightUUIDStr) {
+            let peripherals = centralManager.retrievePeripherals(withIdentifiers: [rightUUID])
+            rightPeripheral = peripherals.first
+            if rightPeripheral != nil {
+                self.rightPeripheral = rightPeripheral
+                self.rightUUIDStr = rightUUIDStr
+            }
+        }
+
+        guard leftPeripheral != nil || rightPeripheral != nil else {
+            result(FlutterError(code: "PeripheralNotFound", message: "Could not retrieve peripherals with provided UUIDs", details: nil))
             return
         }
 
-        currentConnectingDeviceName = deviceName // Save the current device being connected
+        currentConnectingDeviceName = "FlutterConnected"
 
-        centralManager.connect(leftPeripheral, options: nil) // Connect to left device
-        centralManager.connect(rightPeripheral, options: nil) // Connect to right device
+        if let left = leftPeripheral {
+            centralManager.connect(left, options: nil)
+        }
+        if let right = rightPeripheral {
+            centralManager.connect(right, options: nil)
+        }
 
-        result("Connecting to \(deviceName)...")
+        result("Connecting to peripherals...")
     }
 
     func disconnectFromGlasses(result: @escaping FlutterResult) {
@@ -234,15 +285,29 @@ class BluetoothManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate
     }
     
     func writeData(writeData: Data, cbPeripheral: CBPeripheral? = nil, lr: String? = nil) {
+        // If characteristics aren't discovered yet, trigger service discovery
+        if self.leftWChar == nil && self.leftPeripheral != nil {
+            print("writeData: leftWChar is nil, triggering service discovery")
+            self.leftPeripheral?.discoverServices([UARTServiceUUID])
+        }
+        if self.rightWChar == nil && self.rightPeripheral != nil {
+            print("writeData: rightWChar is nil, triggering service discovery")
+            self.rightPeripheral?.discoverServices([UARTServiceUUID])
+        }
+
         if lr == "L" {
             if self.leftWChar != nil {
                 self.leftPeripheral?.writeValue(writeData, for: self.leftWChar!, type: .withoutResponse)
+            } else {
+                print("writeData: leftWChar still nil after discovery attempt")
             }
             return
         }
         if lr == "R" {
             if self.rightWChar != nil {
                 self.rightPeripheral?.writeValue(writeData, for: self.rightWChar!, type: .withoutResponse)
+            } else {
+                print("writeData: rightWChar still nil after discovery attempt")
             }
             return
         }
@@ -250,13 +315,13 @@ class BluetoothManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate
         if let leftWChar = self.leftWChar {
             self.leftPeripheral?.writeValue(writeData, for: leftWChar, type: .withoutResponse)
         } else {
-            print("writeData leftWChar is nil, cannot write data to right peripheral.")
+            print("writeData: leftWChar is nil, cannot write data to left peripheral.")
         }
 
         if let rightWChar = self.rightWChar {
             self.rightPeripheral?.writeValue(writeData, for: rightWChar, type: .withoutResponse)
         } else {
-            print("writeData rightWChar is nil, cannot write data to right peripheral.")
+            print("writeData: rightWChar is nil, cannot write data to right peripheral.")
         }
     }
     

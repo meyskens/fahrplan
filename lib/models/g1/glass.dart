@@ -197,7 +197,8 @@ class Glass {
         _lastActivityTime = DateTime.now();
         return;
       } catch (e) {
-        debugPrint('iOS native send failed, falling back to flutter_blue_plus: $e');
+        debugPrint(
+            'iOS native send failed, falling back to flutter_blue_plus: $e');
         // Fall through to flutter_blue_plus if native method fails
       }
     }
@@ -238,7 +239,8 @@ class Glass {
         await Future.delayed(Duration(milliseconds: 100));
         return;
       } catch (e) {
-        debugPrint('iOS native send failed, falling back to flutter_blue_plus: $e');
+        debugPrint(
+            'iOS native send failed, falling back to flutter_blue_plus: $e');
         // Fall through to flutter_blue_plus if native method fails
       }
     }

@@ -31,8 +31,10 @@ class BluetoothReciever {
   int _syncId = 0;
 
   // iOS Event Channels for receiving data from native Bluetooth manager
-  static const EventChannel _blueInfoChannel = EventChannel('dev.maartje.fahrplan/blue_info');
-  static const EventChannel _blueSpeechChannel = EventChannel('dev.maartje.fahrplan/blue_speech');
+  static const EventChannel _blueInfoChannel =
+      EventChannel('dev.maartje.fahrplan/blue_info');
+  static const EventChannel _blueSpeechChannel =
+      EventChannel('dev.maartje.fahrplan/blue_speech');
 
   factory BluetoothReciever() {
     return singleton;

@@ -291,6 +291,10 @@ class BluetoothManager {
           side: GlassSide.left,
         );
         await leftGlass!.connect();
+        // On iOS, also connect the native BluetoothManager for voice recognition
+        if (Platform.isIOS) {
+          _connectNativeIOS(leftGlass!.name, leftUid);
+        }
         _setReconnect(leftGlass!);
         leftConnected = true;
       } catch (e) {
@@ -308,6 +312,10 @@ class BluetoothManager {
           side: GlassSide.right,
         );
         await rightGlass!.connect();
+        // On iOS, also connect the native BluetoothManager for voice recognition
+        if (Platform.isIOS) {
+          _connectNativeIOS(rightGlass!.name, rightUid);
+        }
         _setReconnect(rightGlass!);
         rightConnected = true;
       } catch (e) {
@@ -437,7 +445,7 @@ class BluetoothManager {
 
       // On iOS, also connect the native BluetoothManager for voice recognition
       if (Platform.isIOS) {
-        _connectNativeIOS(deviceName);
+        _connectNativeIOS(deviceName, glass.device.id.id);
       }
 
       _setReconnect(glass);
@@ -451,18 +459,13 @@ class BluetoothManager {
     }
   }
 
-  Future<void> _connectNativeIOS(String deviceName) async {
+  Future<void> _connectNativeIOS(String deviceName, String deviceId) async {
     try {
-      // Extract the pair name (e.g., "Even_xxxx_L_xxxx" -> "Pair_xxxx")
-      final components = deviceName.split('_');
-      if (components.length >= 2) {
-        final channelNumber = components[1];
-        final pairName = "Pair_$channelNumber";
-        debugPrint('Connecting native iOS BluetoothManager to $pairName');
-        await _iosBluetoothChannel.invokeMethod('connectToDevice', {
-          'deviceName': pairName,
-        });
-      }
+      debugPrint('Connecting native iOS BluetoothManager for $deviceName (ID: $deviceId)');
+      // Pass the device UUID directly - native iOS can retrieve the peripheral by UUID
+      await _iosBluetoothChannel.invokeMethod('connectToDevice', {
+        'deviceName': deviceId,
+      });
     } catch (e) {
       debugPrint('Failed to connect native iOS BluetoothManager: $e');
     }
