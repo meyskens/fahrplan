@@ -18,6 +18,7 @@ import 'package:fahrplan/services/notifications_listener.dart';
 import 'package:fahrplan/services/stops_manager.dart';
 import 'package:fahrplan/utils/utils.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:notification_listener_service/notification_event.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -403,6 +404,10 @@ class BluetoothManager {
     });
   }
 
+  // iOS native method channel for Bluetooth operations
+  static const MethodChannel _iosBluetoothChannel =
+      MethodChannel('dev.maartje.fahrplan/bluetooth');
+
   void _handleDeviceFound(ScanResult result, OnUpdate onUpdate) async {
     String deviceName = result.device.name;
     Glass? glass;
@@ -430,6 +435,11 @@ class BluetoothManager {
     if (glass != null) {
       await glass.connect();
 
+      // On iOS, also connect the native BluetoothManager for voice recognition
+      if (Platform.isIOS) {
+        _connectNativeIOS(deviceName);
+      }
+
       _setReconnect(glass);
     }
 
@@ -438,6 +448,23 @@ class BluetoothManager {
       _isScanning = false;
       stopScanning();
       _sync();
+    }
+  }
+
+  Future<void> _connectNativeIOS(String deviceName) async {
+    try {
+      // Extract the pair name (e.g., "Even_xxxx_L_xxxx" -> "Pair_xxxx")
+      final components = deviceName.split('_');
+      if (components.length >= 2) {
+        final channelNumber = components[1];
+        final pairName = "Pair_$channelNumber";
+        debugPrint('Connecting native iOS BluetoothManager to $pairName');
+        await _iosBluetoothChannel.invokeMethod('connectToDevice', {
+          'deviceName': pairName,
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to connect native iOS BluetoothManager: $e');
     }
   }
 

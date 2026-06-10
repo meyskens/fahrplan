@@ -301,7 +301,12 @@ class BluetoothManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate
                 dictionary["lr"] = legStr
                 dictionary["data"] = data
 
-                self.blueInfoSink(dictionary)
+                // Safely call the event sink if it's set
+                if let sink = self.blueInfoSink {
+                    sink(dictionary)
+                } else {
+                    print("blueInfoSink is nil, cannot forward data to Flutter")
+                }
                 break
         }
     }

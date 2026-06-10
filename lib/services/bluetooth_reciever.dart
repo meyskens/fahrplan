@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:fahrplan/models/fahrplan/widgets/homassistant.dart';
@@ -13,6 +14,7 @@ import 'package:fahrplan/utils/wakeword_settings.dart';
 import 'package:fahrplan/utils/wakeword_engine.dart';
 import 'package:fahrplan/voice/voicecontrol.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:mutex/mutex.dart';
 
 // Command response status codes
@@ -28,6 +30,10 @@ class BluetoothReciever {
 
   int _syncId = 0;
 
+  // iOS Event Channels for receiving data from native Bluetooth manager
+  static const EventChannel _blueInfoChannel = EventChannel('dev.maartje.fahrplan/blue_info');
+  static const EventChannel _blueSpeechChannel = EventChannel('dev.maartje.fahrplan/blue_speech');
+
   factory BluetoothReciever() {
     return singleton;
   }
@@ -40,6 +46,57 @@ class BluetoothReciever {
         Voicecontrol().startVoiceControl();
       },
     );
+
+    // Setup iOS event channel listeners for native Bluetooth data
+    if (Platform.isIOS) {
+      _setupIOSEventChannels();
+    }
+  }
+
+  void _setupIOSEventChannels() {
+    // Listen to blue info events (button presses, commands from glasses)
+    _blueInfoChannel.receiveBroadcastStream().listen(
+      (dynamic event) {
+        if (event is Map) {
+          final data = event['data'];
+          final lr = event['lr'] as String?;
+          if (data != null && lr != null) {
+            final side = lr == 'L' ? GlassSide.left : GlassSide.right;
+            final dataList = (data as List).cast<int>();
+            receiveHandler(side, dataList);
+          }
+        }
+      },
+      onError: (dynamic error) {
+        debugPrint('Blue info event channel error: $error');
+      },
+    );
+
+    // Listen to blue speech events (transcribed speech from glasses)
+    _blueSpeechChannel.receiveBroadcastStream().listen(
+      (dynamic event) {
+        if (event is Map) {
+          final script = event['script'] as String?;
+          if (script != null) {
+            debugPrint('Received speech from iOS native: $script');
+            // Handle the transcribed speech
+            _handleIOSSpeechTranscription(script);
+          }
+        }
+      },
+      onError: (dynamic error) {
+        debugPrint('Blue speech event channel error: $error');
+      },
+    );
+
+    debugPrint('iOS Bluetooth event channels initialized');
+  }
+
+  void _handleIOSSpeechTranscription(String transcription) async {
+    final bt = BluetoothManager();
+    final HomeAssistantWidget ha = HomeAssistantWidget();
+    final resp = await ha.handleQuery(transcription);
+    await bt.sendText(resp);
   }
 
   Future<void> receiveHandler(GlassSide side, List<int> data) async {

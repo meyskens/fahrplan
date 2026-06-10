@@ -140,7 +140,11 @@ class SpeechStreamRecognizer {
         self.lastRecognizedText += cacheString
 
         DispatchQueue.main.async {
-            BluetoothManager.shared.blueSpeechSink?(["script": self.lastRecognizedText])
+            if let sink = BluetoothManager.shared.blueSpeechSink {
+                sink(["script": self.lastRecognizedText])
+            } else {
+                print("blueSpeechSink is nil, cannot forward speech to Flutter")
+            }
         }
         
         recognitionTask?.cancel()

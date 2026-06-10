@@ -7,6 +7,9 @@ import AVFoundation
   var audioPlayer: AVAudioPlayer?
   var backgroundAudioEnabled = false
   var settingsChannel: FlutterMethodChannel?
+  var bluetoothChannel: FlutterMethodChannel?
+  var blueInfoChannel: FlutterEventChannel?
+  var blueSpeechChannel: FlutterEventChannel?
 
   override func application(
     _ application: UIApplication,
@@ -32,9 +35,61 @@ import AVFoundation
           result(FlutterMethodNotImplemented)
         }
       }
+
+      // Setup Bluetooth method channel for sending data to glasses
+      setupBluetoothMethodChannel(controller: controller)
+
+      // Setup event channels for Bluetooth data from glasses
+      setupBluetoothEventChannels(controller: controller)
     }
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  private func setupBluetoothMethodChannel(controller: FlutterViewController) {
+    bluetoothChannel = FlutterMethodChannel(name: "dev.maartje.fahrplan/bluetooth",
+                                           binaryMessenger: controller.binaryMessenger)
+    bluetoothChannel?.setMethodCallHandler { [weak self] (call, result) in
+      switch call.method {
+      case "startScan":
+        BluetoothManager.shared.startScan(result: result)
+      case "stopScan":
+        BluetoothManager.shared.stopScan(result: result)
+      case "connectToDevice":
+        if let args = call.arguments as? [String: Any],
+           let deviceName = args["deviceName"] as? String {
+          BluetoothManager.shared.connectToDevice(deviceName: deviceName, result: result)
+        } else {
+          result(FlutterError(code: "InvalidArgs", message: "deviceName required", details: nil))
+        }
+      case "disconnectFromGlasses":
+        BluetoothManager.shared.disconnectFromGlasses(result: result)
+      case "sendData":
+        if let args = call.arguments as? [String: Any] {
+          BluetoothManager.shared.sendData(params: args)
+          result(nil)
+        } else {
+          result(FlutterError(code: "InvalidArgs", message: "data required", details: nil))
+        }
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+
+    // Update the BluetoothManager's channel reference
+    BluetoothManager.shared.channel = bluetoothChannel
+  }
+
+  private func setupBluetoothEventChannels(controller: FlutterViewController) {
+    // Blue Info Channel - for button presses and commands from glasses
+    blueInfoChannel = FlutterEventChannel(name: "dev.maartje.fahrplan/blue_info",
+                                          binaryMessenger: controller.binaryMessenger)
+    blueInfoChannel?.setStreamHandler(BlueInfoStreamHandler())
+
+    // Blue Speech Channel - for transcribed speech from glasses
+    blueSpeechChannel = FlutterEventChannel(name: "dev.maartje.fahrplan/blue_speech",
+                                            binaryMessenger: controller.binaryMessenger)
+    blueSpeechChannel?.setStreamHandler(BlueSpeechStreamHandler())
   }
 
   override func applicationDidEnterBackground(_ application: UIApplication) {
@@ -64,5 +119,31 @@ import AVFoundation
     // Stop the silent audio when returning to foreground
     audioPlayer?.stop()
     audioPlayer = nil
+  }
+}
+
+// Stream handler for Blue Info events (button presses, commands from glasses)
+class BlueInfoStreamHandler: NSObject, FlutterStreamHandler {
+  func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+    BluetoothManager.shared.blueInfoSink = events
+    return nil
+  }
+
+  func onCancel(withArguments arguments: Any?) -> FlutterError? {
+    BluetoothManager.shared.blueInfoSink = nil
+    return nil
+  }
+}
+
+// Stream handler for Blue Speech events (transcribed speech from glasses)
+class BlueSpeechStreamHandler: NSObject, FlutterStreamHandler {
+  func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+    BluetoothManager.shared.blueSpeechSink = events
+    return nil
+  }
+
+  func onCancel(withArguments arguments: Any?) -> FlutterError? {
+    BluetoothManager.shared.blueSpeechSink = nil
+    return nil
   }
 }

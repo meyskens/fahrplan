@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:fahrplan/models/g1/commands.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'dart:async';
 import '../../services/bluetooth_reciever.dart';
@@ -180,7 +181,27 @@ class Glass {
     }
   }
 
+  // iOS native method channel for sending data when flutter_blue_plus doesn't work reliably
+  static const MethodChannel _iosBluetoothChannel =
+      MethodChannel('dev.maartje.fahrplan/bluetooth');
+
   Future<void> sendData(List<int> data) async {
+    // On iOS, use the native method channel if available
+    if (Platform.isIOS) {
+      try {
+        final lr = side == GlassSide.left ? 'L' : 'R';
+        await _iosBluetoothChannel.invokeMethod('sendData', {
+          'data': Uint8List.fromList(data),
+          'lr': lr,
+        });
+        _lastActivityTime = DateTime.now();
+        return;
+      } catch (e) {
+        debugPrint('iOS native send failed, falling back to flutter_blue_plus: $e');
+        // Fall through to flutter_blue_plus if native method fails
+      }
+    }
+
     if (uartTx != null) {
       try {
         await uartTx!.write(data, withoutResponse: false);
@@ -198,13 +219,32 @@ class Glass {
 
   Future<void> sendDataWithAck(List<int> data,
       {Duration timeout = const Duration(seconds: 2)}) async {
-    if (uartTx == null) {
-      debugPrint('UART TX not available for $side glass.');
+    if (data.isEmpty) {
+      debugPrint('Cannot send empty data');
       return;
     }
 
-    if (data.isEmpty) {
-      debugPrint('Cannot send empty data');
+    // On iOS, use the native method channel if available
+    if (Platform.isIOS) {
+      try {
+        final lr = side == GlassSide.left ? 'L' : 'R';
+        await _iosBluetoothChannel.invokeMethod('sendData', {
+          'data': Uint8List.fromList(data),
+          'lr': lr,
+        });
+        _lastActivityTime = DateTime.now();
+        // Note: ACK handling on iOS native side is not implemented yet
+        // For now, just add a small delay to simulate ACK wait
+        await Future.delayed(Duration(milliseconds: 100));
+        return;
+      } catch (e) {
+        debugPrint('iOS native send failed, falling back to flutter_blue_plus: $e');
+        // Fall through to flutter_blue_plus if native method fails
+      }
+    }
+
+    if (uartTx == null) {
+      debugPrint('UART TX not available for $side glass.');
       return;
     }
 
