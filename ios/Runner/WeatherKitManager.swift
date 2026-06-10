@@ -99,15 +99,20 @@ import Flutter
                 
                 // Build weather data dictionary matching Gadgetbridge format
                 let currentTempKelvin = Int(currentWeather.temperature.converted(to: .kelvin).value)
-                let todayMaxTemp = Int((dailyForecast?.highTemperature.converted(to: .kelvin).value) ?? currentWeather.temperature.converted(to: .kelvin).value)
-                let todayMinTemp = Int((dailyForecast?.lowTemperature.converted(to: .kelvin).value) ?? currentWeather.temperature.converted(to: .kelvin).value)
+                let currentTempKelvinForFallback = currentTempKelvin
+                let maxTempValue = dailyForecast?.highTemperature.converted(to: .kelvin).value
+                let todayMaxTemp = Int(maxTempValue ?? Double(currentTempKelvinForFallback))
+                let minTempValue = dailyForecast?.lowTemperature.converted(to: .kelvin).value
+                let todayMinTemp = Int(minTempValue ?? Double(currentTempKelvinForFallback))
                 let windSpeed = Int(currentWeather.wind.speed.converted(to: .kilometersPerHour).value)
                 let windDirection = Int(currentWeather.wind.direction.value)
                 let hasPrecipitation = currentWeather.precipitationIntensity.value > 0
                 let precipProbability = hasPrecipitation ? 100 : 0
-                let pressure = Int(currentWeather.pressure.converted(to: .millibars).value)
+                let pressureValue = currentWeather.pressure.converted(to: .millibars).value
+                let pressure = Int(pressureValue)
                 let cloudCover = Int(currentWeather.cloudCover * 100)
-                let feelsLikeTemp = Int(currentWeather.apparentTemperature.converted(to: .kelvin).value)
+                let feelsLikeTempValue = currentWeather.apparentTemperature.converted(to: .kelvin).value
+                let feelsLikeTemp = Int(feelsLikeTempValue)
                 
                 var weatherData: [String: Any] = [
                     "timestamp": Int(Date().timeIntervalSince1970),
@@ -203,8 +208,6 @@ import Flutter
             return 300 // Drizzle
         case .rain, .heavyRain:
             return 500 // Rain
-        case .showers:
-            return 521 // Shower rain
         case .thunderstorms:
             return 200 // Thunderstorm
         case .snow, .heavySnow:
