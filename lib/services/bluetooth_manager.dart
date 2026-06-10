@@ -121,6 +121,19 @@ class BluetoothManager {
     // iOS and Android use different Bluetooth permission models.
     if (Platform.isIOS) {
       try {
+        // First, explicitly request Bluetooth permission on iOS
+        // This will show the system permission dialog if not already granted
+        final bluetoothStatus = await Permission.bluetooth.request();
+        if (bluetoothStatus.isPermanentlyDenied) {
+          await openAppSettings();
+          throw Exception(
+              'Bluetooth access is required. Please enable Bluetooth for this app in Settings.');
+        }
+        if (bluetoothStatus.isDenied) {
+          throw Exception(
+              'Bluetooth permissions are required to connect to the glasses.');
+        }
+
         final isSupported = await FlutterBluePlus.isSupported;
         if (!isSupported) {
           throw Exception('Bluetooth is not supported on this device.');
