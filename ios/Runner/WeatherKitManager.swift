@@ -98,64 +98,53 @@ import Flutter
                 let conditionCode = mapWeatherCondition(currentWeather.condition)
                 
                 // Build weather data dictionary matching Gadgetbridge format
-                let currentTempMeasurement = currentWeather.temperature.converted(to: .kelvin)
-                let currentTempKelvin = Int(currentTempMeasurement.value)
+                let currentTempKelvin = Int(currentWeather.temperature.converted(to: .kelvin).value)
                 let currentTempKelvinForFallback = currentTempKelvin
                 
-                let maxTempMeasurement = dailyForecast?.highTemperature.converted(to: .kelvin)
-                let maxTempValue = maxTempMeasurement?.value ?? Double(currentTempKelvinForFallback)
-                let todayMaxTemp = Int(maxTempValue)
+                let todayMaxTemp: Int
+                if let maxTemp = dailyForecast?.highTemperature.converted(to: .kelvin) {
+                    todayMaxTemp = Int(maxTemp.value)
+                } else {
+                    todayMaxTemp = currentTempKelvinForFallback
+                }
                 
-                let minTempMeasurement = dailyForecast?.lowTemperature.converted(to: .kelvin)
-                let minTempValue = minTempMeasurement?.value ?? Double(currentTempKelvinForFallback)
-                let todayMinTemp = Int(minTempValue)
+                let todayMinTemp: Int
+                if let minTemp = dailyForecast?.lowTemperature.converted(to: .kelvin) {
+                    todayMinTemp = Int(minTemp.value)
+                } else {
+                    todayMinTemp = currentTempKelvinForFallback
+                }
                 
-                let windSpeedMeasurement = currentWeather.wind.speed.converted(to: .kilometersPerHour)
-                let windSpeed = Int(windSpeedMeasurement.value)
-                
-                let windDirectionMeasurement = currentWeather.wind.direction
-                let windDirection = Int(windDirectionMeasurement.value)
-                
-                let hasPrecipitation = currentWeather.precipitationIntensity.value > 0
-                let precipProbability = hasPrecipitation ? 100 : 0
-                
-                let pressureMeasurement = currentWeather.pressure.converted(to: .millibars)
-                let pressure = Int(pressureMeasurement.value)
-                
-                let cloudCoverValue = currentWeather.cloudCover * 100
-                let cloudCover = Int(cloudCoverValue)
-                
-                let feelsLikeMeasurement = currentWeather.apparentTemperature.converted(to: .kelvin)
-                let feelsLikeTemp = Int(feelsLikeMeasurement.value)
-                
-                let humidityValue = currentWeather.humidity * 100
-                let humidity = Int(humidityValue)
-                
+                let windSpeed = Int(currentWeather.wind.speed.converted(to: .kilometersPerHour).value)
+                let windDirection = Int(currentWeather.wind.direction.value)
+                let precipProbability = currentWeather.precipitationIntensity.value > 0 ? 100 : 0
+                let pressure = Int(currentWeather.pressure.converted(to: .millibars).value)
+                let cloudCover = Int(currentWeather.cloudCover * 100)
+                let feelsLikeTemp = Int(currentWeather.apparentTemperature.converted(to: .kelvin).value)
+                let humidity = Int(currentWeather.humidity * 100)
                 let uvIndexValue = currentWeather.uvIndex.value
+                let timestamp = Int(Date().timeIntervalSince1970)
                 
-                let timestampValue = Date().timeIntervalSince1970
-                let timestamp = Int(timestampValue)
-                
-                var weatherData: [String: Any] = [
-                    "timestamp": timestamp,
-                    "location": "Current Location",
-                    "currentTemp": currentTempKelvin,
-                    "currentConditionCode": conditionCode,
-                    "currentCondition": currentWeather.condition.description,
-                    "currentHumidity": humidity,
-                    "todayMaxTemp": todayMaxTemp,
-                    "todayMinTemp": todayMinTemp,
-                    "windSpeed": windSpeed,
-                    "windDirection": windDirection,
-                    "uvIndex": uvIndexValue,
-                    "precipProbability": precipProbability,
-                    "pressure": pressure,
-                    "cloudCover": cloudCover,
-                    "feelsLikeTemp": feelsLikeTemp,
-                    "isCurrentLocation": 1,
-                    "latitude": location.coordinate.latitude,
-                    "longitude": location.coordinate.longitude
-                ]
+                // Build dictionary in parts to help type checker
+                var weatherData: [String: Any] = [:]
+                weatherData["timestamp"] = timestamp
+                weatherData["location"] = "Current Location"
+                weatherData["currentTemp"] = currentTempKelvin
+                weatherData["currentConditionCode"] = conditionCode
+                weatherData["currentCondition"] = currentWeather.condition.description
+                weatherData["currentHumidity"] = humidity
+                weatherData["todayMaxTemp"] = todayMaxTemp
+                weatherData["todayMinTemp"] = todayMinTemp
+                weatherData["windSpeed"] = windSpeed
+                weatherData["windDirection"] = windDirection
+                weatherData["uvIndex"] = uvIndexValue
+                weatherData["precipProbability"] = precipProbability
+                weatherData["pressure"] = pressure
+                weatherData["cloudCover"] = cloudCover
+                weatherData["feelsLikeTemp"] = feelsLikeTemp
+                weatherData["isCurrentLocation"] = 1
+                weatherData["latitude"] = location.coordinate.latitude
+                weatherData["longitude"] = location.coordinate.longitude
                 
                 // Add hourly forecast if available
                 if weather.hourlyForecast.count > 0 {
