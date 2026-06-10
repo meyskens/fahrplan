@@ -19,9 +19,6 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Generate localizations
-        run: flutter gen-l10n
-
       - name: setup macOS keys
         env:
           MACOS_USER: ${{ secrets.MACOS_USER }}
