@@ -11,7 +11,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// the Android Gadgetbridge weather broadcast approach
 class IosWeatherService {
   static const String _sharedPrefsKey = 'WeatherJson';
-  static const MethodChannel _channel = MethodChannel('dev.maartje.fahrplan/weather');
+  static const MethodChannel _channel =
+      MethodChannel('dev.maartje.fahrplan/weather');
 
   final List<void Function(WeatherSpec)> _listeners = [];
   bool _isStarted = false;
@@ -85,7 +86,8 @@ class IosWeatherService {
 
     // Otherwise fetch from native side
     try {
-      final result = await _channel.invokeMethod<Map<dynamic, dynamic>>('getCurrentWeather');
+      final result = await _channel
+          .invokeMethod<Map<dynamic, dynamic>>('getCurrentWeather');
       if (result != null) {
         final weatherData = Map<String, dynamic>.from(result);
         await _saveWeatherData(weatherData);
@@ -126,7 +128,8 @@ class IosWeatherService {
         }
       }
 
-      debugPrint('Weather updated via WeatherKit: ${weatherSpec.location} ${weatherSpec.currentTemp}K');
+      debugPrint(
+          'Weather updated via WeatherKit: ${weatherSpec.location} ${weatherSpec.currentTemp}K');
     } catch (e) {
       debugPrint('Error handling weather update: $e');
     }
