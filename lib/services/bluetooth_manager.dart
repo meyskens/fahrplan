@@ -4,8 +4,10 @@ import 'package:android_package_manager/android_package_manager.dart';
 import 'package:fahrplan/models/fahrplan/fahrplan_dashboard.dart';
 import 'package:fahrplan/models/g1/bmp.dart';
 import 'package:fahrplan/models/g1/commands.dart';
+import 'package:fahrplan/models/g1/control_commands.dart';
 import 'package:fahrplan/models/g1/crc.dart';
 import 'package:fahrplan/models/g1/dashboard.dart';
+import 'package:fahrplan/models/g1/device_info.dart';
 import 'package:fahrplan/models/g1/navigation.dart';
 import 'package:fahrplan/models/g1/setup.dart';
 import 'package:fahrplan/services/dashboard_controller.dart';
@@ -921,6 +923,247 @@ class BluetoothManager {
   }
 
   Future<void> clearScreen() async {
-    await sendCommandToGlasses([0x18]);
+    await sendCommandToGlasses(ControlCommands.clearScreen());
+  }
+
+  // ========== Device Info Getters ==========
+
+  /// Get firmware information from the glasses
+  /// Response is raw ASCII data starting with "net"
+  Future<void> getFirmwareInfo() async {
+    await sendCommandToGlasses(DeviceInfoCommands.getFirmwareInfo());
+  }
+
+  /// Get battery state from the glasses
+  /// Returns battery percentage and charging status
+  Future<void> getBatteryState() async {
+    await sendCommandToGlasses(DeviceInfoCommands.getBatteryState());
+  }
+
+  /// Get brightness settings from the glasses
+  /// Returns brightness value (0-42) and auto brightness enabled status
+  Future<void> getBrightness() async {
+    await sendCommandToGlasses(DeviceInfoCommands.getBrightness());
+  }
+
+  /// Get silent mode settings from the glasses
+  Future<void> getSilentMode() async {
+    await sendCommandToGlasses(DeviceInfoCommands.getSilentMode());
+  }
+
+  /// Get anti-shake settings from the glasses
+  Future<void> getAntiShake() async {
+    await sendCommandToGlasses(DeviceInfoCommands.getAntiShake());
+  }
+
+  /// Get head-up activation angle settings from the glasses
+  Future<void> getHeadUpAngle() async {
+    await sendCommandToGlasses(DeviceInfoCommands.getHeadUpAngle());
+  }
+
+  /// Get wear detection settings from the glasses
+  Future<void> getWearDetection() async {
+    await sendCommandToGlasses(DeviceInfoCommands.getWearDetection());
+  }
+
+  /// Get display settings (height and depth) from the glasses
+  Future<void> getDisplaySettings() async {
+    await sendCommandToGlasses(DeviceInfoCommands.getDisplaySettings());
+  }
+
+  /// Get time since boot in seconds from the glasses
+  Future<void> getTimeSinceBoot() async {
+    await sendCommandToGlasses(DeviceInfoCommands.getTimeSinceBoot());
+  }
+
+  /// Get buried point data (user usage tracking) from the glasses
+  Future<void> getBuriedPointData() async {
+    await sendCommandToGlasses(DeviceInfoCommands.getBuriedPointData());
+  }
+
+  /// Get MAC address information from the glasses
+  Future<void> getMacAddress() async {
+    await sendCommandToGlasses(DeviceInfoCommands.getMacAddress());
+  }
+
+  /// Get app whitelist settings from the glasses
+  Future<void> getAppWhitelist() async {
+    await sendCommandToGlasses(DeviceInfoCommands.getAppWhitelist());
+  }
+
+  /// Get glasses serial number from the glasses
+  Future<void> getGlassesSerial() async {
+    await sendCommandToGlasses(DeviceInfoCommands.getGlassesSerial());
+  }
+
+  /// Get device serial number from the glasses
+  Future<void> getDeviceSerial() async {
+    await sendCommandToGlasses(DeviceInfoCommands.getDeviceSerial());
+  }
+
+  /// Get ESB channel information from the glasses
+  Future<void> getEsbChannel() async {
+    await sendCommandToGlasses(DeviceInfoCommands.getEsbChannel());
+  }
+
+  /// Get ESB channel notification count from the glasses
+  Future<void> getEsbNotificationCount() async {
+    await sendCommandToGlasses(DeviceInfoCommands.getEsbNotificationCount());
+  }
+
+  // ========== Control Commands ==========
+
+  /// Send hard reset to restart the glasses
+  Future<void> hardReset() async {
+    await sendCommandToGlasses(ControlCommands.hardReset());
+  }
+
+  /// Send heartbeat to keep connection alive
+  /// Should be sent every 28-30 seconds (disconnection happens after 32 seconds)
+  Future<void> sendHeartbeat(int sequence) async {
+    await sendCommandToGlasses(ControlCommands.heartbeat(sequence));
+  }
+
+  /// Clear notification on the glasses
+  Future<void> clearNotification() async {
+    await sendCommandToGlasses(ControlCommands.clearNotification());
+  }
+
+  /// Lock the dashboard display
+  Future<void> dashboardLock() async {
+    await sendCommandToGlasses(ControlCommands.dashboardLock());
+  }
+
+  /// Initialize command (sent to left arm)
+  Future<void> sendInit() async {
+    if (leftGlass != null) {
+      await leftGlass!.sendData(ControlCommands.init());
+    }
+  }
+
+  // ========== Setter Commands ==========
+
+  /// Set brightness level (0-42) and auto brightness
+  Future<void> setBrightness(int brightness, bool autoBrightness) async {
+    // Send to right arm only
+    if (rightGlass != null) {
+      await rightGlass!
+          .sendData(SetterCommands.setBrightness(brightness, autoBrightness));
+    }
+  }
+
+  /// Set silent mode on/off
+  Future<void> setSilentMode(bool enabled) async {
+    await sendCommandToGlasses(SetterCommands.setSilentMode(enabled));
+  }
+
+  /// Set head-up activation angle (0-60 degrees)
+  Future<void> setHeadUpAngle(int angle) async {
+    // Send to right arm only
+    if (rightGlass != null) {
+      await rightGlass!.sendData(SetterCommands.setHeadUpAngle(angle));
+    }
+  }
+
+  /// Set wear detection on/off
+  Future<void> setWearDetection(bool enabled) async {
+    await sendCommandToGlasses(SetterCommands.setWearDetection(enabled));
+  }
+
+  /// Set debug mode on/off
+  Future<void> setDebugMode(bool enabled) async {
+    await sendCommandToGlasses(SetterCommands.setDebugMode(enabled));
+  }
+
+  /// Sync sequence number (sent to right lens)
+  Future<void> syncSequence(int sequence) async {
+    if (rightGlass != null) {
+      await rightGlass!.sendData(SetterCommands.syncSequence(sequence));
+    }
+  }
+
+  /// Set display settings (height: 0-8, depth: 1-9)
+  /// Must be called twice: first with preview=true, then after a few seconds with preview=false
+  Future<void> setDisplaySettings({
+    required int height,
+    required int depth,
+    required bool preview,
+  }) async {
+    await sendCommandToGlasses(SetterCommands.setDisplaySettings(
+      height: height,
+      depth: depth,
+      preview: preview,
+    ));
+  }
+
+  // ========== Button Configuration ==========
+
+  /// Set head-up action to none
+  Future<void> setHeadUpNone() async {
+    await sendCommandToGlasses(ButtonConfigCommands.setHeadUpNone());
+  }
+
+  /// Set head-up action to dashboard
+  Future<void> setHeadUpDashboard() async {
+    await sendCommandToGlasses(ButtonConfigCommands.setHeadUpDashboard());
+  }
+
+  /// Set double tap action to none
+  Future<void> setDoubleTapNone() async {
+    await sendCommandToGlasses(ButtonConfigCommands.setDoubleTapNone());
+  }
+
+  /// Set double tap action to transcribe
+  Future<void> setDoubleTapTranscribe() async {
+    await sendCommandToGlasses(ButtonConfigCommands.setDoubleTapTranscribe());
+  }
+
+  /// Set double tap action to teleprompter
+  Future<void> setDoubleTapTeleprompter() async {
+    await sendCommandToGlasses(ButtonConfigCommands.setDoubleTapTeleprompter());
+  }
+
+  /// Set double tap action to translate
+  Future<void> setDoubleTapTranslate() async {
+    await sendCommandToGlasses(ButtonConfigCommands.setDoubleTapTranslate());
+  }
+
+  /// Set double tap action to dashboard
+  Future<void> setDoubleTapDashboard() async {
+    await sendCommandToGlasses(ButtonConfigCommands.setDoubleTapDashboard());
+  }
+
+  // ========== Calibration Commands ==========
+
+  /// Reset 0-degree position
+  Future<void> resetZeroDegreePosition() async {
+    await sendCommandToGlasses(CalibrationCommands.resetZeroDegreePosition());
+  }
+
+  /// Start calibration
+  Future<void> startCalibration() async {
+    await sendCommandToGlasses(CalibrationCommands.startCalibration());
+  }
+
+  /// Acknowledge calibration on glasses
+  Future<void> ackCalibration() async {
+    await sendCommandToGlasses(CalibrationCommands.ackCalibration());
+  }
+
+  /// Complete calibration in app
+  Future<void> completeCalibration() async {
+    await sendCommandToGlasses(CalibrationCommands.completeCalibration());
+  }
+
+  // ========== Screen Control ==========
+
+  /// Turn display on
+  Future<void> turnDisplayOn() async {
+    await sendCommandToGlasses(ScreenCommands.turnDisplayOn());
+  }
+
+  /// Turn display off
+  Future<void> turnDisplayOff() async {
+    await sendCommandToGlasses(ScreenCommands.turnDisplayOff());
   }
 }

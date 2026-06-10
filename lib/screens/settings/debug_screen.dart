@@ -24,6 +24,8 @@ class _DebugPageSate extends State<DebugPage> {
 
   int _seqId = 0;
   bool _enableUntestedFeatures = false;
+  bool _silentModeEnabled = false;
+  bool _wearDetectionEnabled = false;
 
   void _sendText() async {
     String text = _textController.text;
@@ -278,8 +280,8 @@ class _DebugPageSate extends State<DebugPage> {
       await bluetoothManager.sendNavigationPoller();
 
       // Generate and send primary image (136x136) - road map + overlay
-      final primaryImage = _generateDemoRoadMap(136, 136);
-      final primaryOverlay = _generateDemoOverlay(136, 136, 1);
+      // final primaryImage = _generateDemoRoadMap(136, 136);
+      // final primaryOverlay = _generateDemoOverlay(136, 136, 1);
       //await bluetoothManager.sendNavigationPrimaryImage(
       //  image: primaryImage,
       //  overlay: primaryOverlay,
@@ -289,9 +291,9 @@ class _DebugPageSate extends State<DebugPage> {
       debugPrint('Sent primary navigation image');
 
       // Generate and send secondary image (488x136) - wider view
-      final secondaryImage = _generateDemoRoadMap(488, 136);
-      final secondaryOverlay =
-          _generateDemoOverlay(488, 136, 0, position: (1, 1));
+      // final secondaryImage = _generateDemoRoadMap(488, 136);
+      // final secondaryOverlay =
+      //     _generateDemoOverlay(488, 136, 0, position: (1, 1));
       //await bluetoothManager.sendNavigationSecondaryImage(
       //  image: secondaryImage,
       //  overlay: secondaryOverlay,
@@ -506,8 +508,587 @@ class _DebugPageSate extends State<DebugPage> {
             onPressed: _debugNavigationCommand,
             child: const Text("Debug Turn-by-Turn Navigation"),
           ),
+          const Divider(),
+          const Text('Device Info Getters',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ElevatedButton(
+                onPressed: _getFirmwareInfo,
+                child: const Text("Get Firmware Info"),
+              ),
+              ElevatedButton(
+                onPressed: _getBatteryState,
+                child: const Text("Get Battery"),
+              ),
+              ElevatedButton(
+                onPressed: _getBrightness,
+                child: const Text("Get Brightness"),
+              ),
+              ElevatedButton(
+                onPressed: _getSilentMode,
+                child: const Text("Get Silent Mode"),
+              ),
+              ElevatedButton(
+                onPressed: _getWearDetection,
+                child: const Text("Get Wear Detection"),
+              ),
+              ElevatedButton(
+                onPressed: _getDisplaySettings,
+                child: const Text("Get Display Settings"),
+              ),
+              ElevatedButton(
+                onPressed: _getTimeSinceBoot,
+                child: const Text("Get Time Since Boot"),
+              ),
+              ElevatedButton(
+                onPressed: _getHeadUpAngle,
+                child: const Text("Get Head-Up Angle"),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Text('Control Commands',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ElevatedButton(
+                onPressed: _hardReset,
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text("Hard Reset",
+                    style: TextStyle(color: Colors.white)),
+              ),
+              ElevatedButton(
+                onPressed: _clearScreen,
+                child: const Text("Clear Screen"),
+              ),
+              ElevatedButton(
+                onPressed: _clearNotification,
+                child: const Text("Clear Notification"),
+              ),
+              ElevatedButton(
+                onPressed: _dashboardLock,
+                child: const Text("Dashboard Lock"),
+              ),
+              ElevatedButton(
+                onPressed: _sendInit,
+                child: const Text("Send Init"),
+              ),
+              ElevatedButton(
+                onPressed: _sendHeartbeat,
+                child: const Text("Send Heartbeat"),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Text('Setter Commands',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ElevatedButton(
+                onPressed: _setBrightnessLow,
+                child: const Text("Set Brightness Low"),
+              ),
+              ElevatedButton(
+                onPressed: _setBrightnessHigh,
+                child: const Text("Set Brightness High"),
+              ),
+              ElevatedButton(
+                onPressed: _toggleSilentMode,
+                child: const Text("Toggle Silent Mode"),
+              ),
+              ElevatedButton(
+                onPressed: _toggleWearDetection,
+                child: const Text("Toggle Wear Detection"),
+              ),
+              ElevatedButton(
+                onPressed: _setHeadUpAngle,
+                child: const Text("Set Head-Up Angle (30°)"),
+              ),
+              ElevatedButton(
+                onPressed: _turnDisplayOn,
+                child: const Text("Turn Display On"),
+              ),
+              ElevatedButton(
+                onPressed: _turnDisplayOff,
+                child: const Text("Turn Display Off"),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Text('Button Configuration',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ElevatedButton(
+                onPressed: _setDoubleTapNone,
+                child: const Text("Double Tap: None"),
+              ),
+              ElevatedButton(
+                onPressed: _setDoubleTapDashboard,
+                child: const Text("Double Tap: Dashboard"),
+              ),
+              ElevatedButton(
+                onPressed: _setDoubleTapTranscribe,
+                child: const Text("Double Tap: Transcribe"),
+              ),
+              ElevatedButton(
+                onPressed: _setDoubleTapTranslate,
+                child: const Text("Double Tap: Translate"),
+              ),
+              ElevatedButton(
+                onPressed: _setDoubleTapTeleprompter,
+                child: const Text("Double Tap: Teleprompter"),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Text('Calibration',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ElevatedButton(
+                onPressed: _resetZeroDegreePosition,
+                child: const Text("Reset 0° Position"),
+              ),
+              ElevatedButton(
+                onPressed: _startCalibration,
+                child: const Text("Start Calibration"),
+              ),
+              ElevatedButton(
+                onPressed: _ackCalibration,
+                child: const Text("Ack Calibration"),
+              ),
+              ElevatedButton(
+                onPressed: _completeCalibration,
+                child: const Text("Complete Calibration"),
+              ),
+            ],
+          ),
         ],
       ),
     );
+  }
+
+  // ========== Device Info Getters ==========
+
+  void _getFirmwareInfo() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.getFirmwareInfo();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Firmware info requested - check logs')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _getBatteryState() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.getBatteryState();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Battery state requested - check logs')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _getBrightness() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.getBrightness();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Brightness requested - check logs')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _getSilentMode() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.getSilentMode();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Silent mode requested - check logs')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _getWearDetection() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.getWearDetection();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Wear detection requested - check logs')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _getDisplaySettings() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.getDisplaySettings();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Display settings requested - check logs')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _getTimeSinceBoot() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.getTimeSinceBoot();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Time since boot requested - check logs')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _getHeadUpAngle() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.getHeadUpAngle();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Head-up angle requested - check logs')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  // ========== Control Commands ==========
+
+  void _hardReset() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.hardReset();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Hard reset sent - glasses will restart')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _clearScreen() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.clearScreen();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Screen cleared')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _clearNotification() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.clearNotification();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Notification cleared')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _dashboardLock() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.dashboardLock();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Dashboard lock sent')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _sendInit() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.sendInit();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Init command sent')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _sendHeartbeat() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.sendHeartbeat(0);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Heartbeat sent')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  // ========== Setter Commands ==========
+
+  void _toggleSilentMode() async {
+    if (bluetoothManager.isConnected) {
+      _silentModeEnabled = !_silentModeEnabled;
+      await bluetoothManager.setSilentMode(_silentModeEnabled);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(
+                'Silent mode ${_silentModeEnabled ? "enabled" : "disabled"}')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _setBrightnessLow() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.setBrightness(10, false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Brightness set to low (10)')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _setBrightnessHigh() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.setBrightness(40, false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Brightness set to high (40)')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _toggleWearDetection() async {
+    if (bluetoothManager.isConnected) {
+      _wearDetectionEnabled = !_wearDetectionEnabled;
+      await bluetoothManager.setWearDetection(_wearDetectionEnabled);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(
+                'Wear detection ${_wearDetectionEnabled ? "enabled" : "disabled"}')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _setHeadUpAngle() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.setHeadUpAngle(30);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Head-up angle set to 30°')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _turnDisplayOn() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.turnDisplayOn();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Display turned on')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _turnDisplayOff() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.turnDisplayOff();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Display turned off')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  // ========== Button Configuration ==========
+
+  void _setDoubleTapNone() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.setDoubleTapNone();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Double tap set to: None')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _setDoubleTapDashboard() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.setDoubleTapDashboard();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Double tap set to: Dashboard')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _setDoubleTapTranscribe() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.setDoubleTapTranscribe();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Double tap set to: Transcribe')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _setDoubleTapTranslate() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.setDoubleTapTranslate();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Double tap set to: Translate')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _setDoubleTapTeleprompter() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.setDoubleTapTeleprompter();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Double tap set to: Teleprompter')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  // ========== Calibration Commands ==========
+
+  void _resetZeroDegreePosition() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.resetZeroDegreePosition();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Zero degree position reset')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _startCalibration() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.startCalibration();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Calibration started')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _ackCalibration() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.ackCalibration();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Calibration acknowledged')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
+  }
+
+  void _completeCalibration() async {
+    if (bluetoothManager.isConnected) {
+      await bluetoothManager.completeCalibration();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Calibration completed')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Glasses are not connected')),
+      );
+    }
   }
 }
