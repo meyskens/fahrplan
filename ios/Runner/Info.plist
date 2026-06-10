@@ -56,9 +56,9 @@
 	<key>NSCalendarsUsageDescription</key>
 	<string>This app needs access to calendars to display your events and travel plans.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>This app needs access to location to provide navigation and nearby transit information.</string>
+	<string>This app needs access to location to provide navigation, nearby transit information, and local weather updates.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This app needs access to location to provide navigation and nearby transit information.</string>
+	<string>This app needs access to location to provide navigation, nearby transit information, and local weather updates.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>bluetooth-central</string>

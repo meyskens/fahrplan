@@ -14,6 +14,7 @@ import 'package:fahrplan/services/dashboard_controller.dart';
 import 'package:fahrplan/models/g1/note.dart';
 import 'package:fahrplan/models/g1/notification.dart';
 import 'package:fahrplan/services/weather_broadcast_service.dart';
+import 'package:fahrplan/services/ios_weather_service.dart';
 import 'package:fahrplan/services/notifications_listener.dart';
 import 'package:fahrplan/services/stops_manager.dart';
 import 'package:fahrplan/utils/utils.dart';
@@ -54,6 +55,7 @@ class BluetoothManager {
   DashboardController dashboardController = DashboardController();
   StopsManager stopsManager = StopsManager();
   WeatherBroadcastService weatherBroadcastService = WeatherBroadcastService();
+  IosWeatherService iosWeatherService = IosWeatherService();
 
   Timer? _syncTimer;
   Completer<void>? _currentTextOperation;
@@ -97,7 +99,7 @@ class BluetoothManager {
     await fahrplanDashboard.initialize();
     stopsManager.reload();
 
-    // Initialize weather broadcast service on Android
+    // Initialize weather service based on platform
     if (Platform.isAndroid) {
       try {
         await weatherBroadcastService.start();
@@ -109,6 +111,18 @@ class BluetoothManager {
         });
       } catch (e) {
         debugPrint('Failed to start weather broadcast service: $e');
+      }
+    } else if (Platform.isIOS) {
+      try {
+        await iosWeatherService.start();
+        iosWeatherService.addListener((weather) {
+          debugPrint(
+              'Weather updated via WeatherKit: ${weather.location} ${weather.currentTemp}K');
+          // Trigger a dashboard sync when weather is updated
+          _sync();
+        });
+      } catch (e) {
+        debugPrint('Failed to start iOS weather service: $e');
       }
     }
 
@@ -567,10 +581,6 @@ class BluetoothManager {
 
   Future<void> sendCommandToGlasses(List<int> command,
       {bool needsAck = true, Duration delay = Duration.zero}) async {
-    // On iOS, we need to add a small delay between commands to ensure proper sequencing
-    // because the native method channel returns before the BLE write actually completes
-    const iosCommandDelay = Duration(milliseconds: 50);
-    
     if (leftGlass != null) {
       if (needsAck) {
         await leftGlass!.sendDataWithAck(command);
@@ -579,10 +589,6 @@ class BluetoothManager {
         if (delay > Duration.zero) {
           await Future.delayed(delay);
         }
-      }
-      // Add iOS-specific delay after left glass command
-      if (Platform.isIOS) {
-        await Future.delayed(iosCommandDelay);
       }
     }
     if (rightGlass != null) {
@@ -593,10 +599,6 @@ class BluetoothManager {
         if (delay > Duration.zero) {
           await Future.delayed(delay);
         }
-      }
-      // Add iOS-specific delay after right glass command
-      if (Platform.isIOS) {
-        await Future.delayed(iosCommandDelay);
       }
     }
   }
