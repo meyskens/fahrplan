@@ -1,0 +1,45 @@
+name: Build and Upload iOS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: [self-hosted, macOS]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Flutter
+        run: flutter doctor
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate localizations
+        run: flutter gen-l10n
+
+      - name: setup macOS keys
+        env:
+          MACOS_USER: ${{ secrets.MACOS_USER }}
+          MACOS_PASS: ${{ secrets.MACOS_PASS }}
+          APPSTORE_API_KEY: ${{ secrets.APPSTORE_API_KEY }}
+          APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+        run: |
+          security -v unlock-keychain -p "$MACOS_PASS" "/Users/$MACOS_USER/Library/Keychains/login.keychain-db"
+          mkdir -p ~/.appstoreconnect/private_keys || true
+          echo "$APPSTORE_API_KEY" > ~/.appstoreconnect/private_keys/AuthKey_$APPSTORE_API_KEY_ID.p8
+
+      - name: Build and Upload to TestFlight
+        env:
+          APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          APPSTORE_API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+        run: |
+          flutter clean
+          flutter pub get
+          flutter gen-l10n
+          flutter build ipa --release --build-number=${{ github.run_number }}
+          xcrun altool --upload-app --type ios -f build/ios/ipa/*.ipa --apiKey "$APPSTORE_API_KEY_ID" --apiIssuer "$APPSTORE_API_ISSUER_ID"
