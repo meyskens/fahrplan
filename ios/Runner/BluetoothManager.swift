@@ -279,12 +279,29 @@ import Flutter
     }
     
     
-    func sendData(params:[String:Any]) {
-        let flutterData = params["data"] as! FlutterStandardTypedData
-        writeData(writeData: flutterData.data, lr: params["lr"] as? String)
-    }
+    // Completion handlers for write operations (to match Android's withoutResponse: false behavior)
+    private var writeCompletionHandlers: [CBUUID: () -> Void] = [:]
     
-    func writeData(writeData: Data, cbPeripheral: CBPeripheral? = nil, lr: String? = nil) {
+    func sendData(params:[String:Any], result: @escaping FlutterResult) {
+        let flutterData = params["data"] as! FlutterStandardTypedData
+        let lr = params["lr"] as? String
+        
+        // Count how many writes we need to do
+        var pendingWrites = 0
+        var completedWrites = 0
+        var writeError: Error?
+        
+        let checkCompletion = {
+            completedWrites += 1
+            if completedWrites >= pendingWrites {
+                if let error = writeError {
+                    result(FlutterError(code: "WriteError", message: error.localizedDescription, details: nil))
+                } else {
+                    result(nil)
+                }
+            }
+        }
+        
         // If characteristics aren't discovered yet, trigger service discovery
         if self.leftWChar == nil && self.leftPeripheral != nil {
             print("writeData: leftWChar is nil, triggering service discovery")
@@ -297,35 +314,62 @@ import Flutter
 
         if lr == "L" {
             if self.leftWChar != nil {
-                self.leftPeripheral?.writeValue(writeData, for: self.leftWChar!, type: .withoutResponse)
+                pendingWrites = 1
+                writeCompletionHandlers[self.leftWChar!.uuid] = checkCompletion
+                self.leftPeripheral?.writeValue(writeData, for: self.leftWChar!, type: .withResponse)
             } else {
                 print("writeData: leftWChar still nil after discovery attempt")
+                result(FlutterError(code: "NotConnected", message: "Left glass not connected", details: nil))
             }
             return
         }
         if lr == "R" {
             if self.rightWChar != nil {
-                self.rightPeripheral?.writeValue(writeData, for: self.rightWChar!, type: .withoutResponse)
+                pendingWrites = 1
+                writeCompletionHandlers[self.rightWChar!.uuid] = checkCompletion
+                self.rightPeripheral?.writeValue(writeData, for: self.rightWChar!, type: .withResponse)
             } else {
                 print("writeData: rightWChar still nil after discovery attempt")
+                result(FlutterError(code: "NotConnected", message: "Right glass not connected", details: nil))
             }
             return
         }
         
+        // Write to both glasses
+        if self.leftWChar != nil {
+            pendingWrites += 1
+        }
+        if self.rightWChar != nil {
+            pendingWrites += 1
+        }
+        
+        if pendingWrites == 0 {
+            result(FlutterError(code: "NotConnected", message: "No glasses connected", details: nil))
+            return
+        }
+        
         if let leftWChar = self.leftWChar {
-            self.leftPeripheral?.writeValue(writeData, for: leftWChar, type: .withoutResponse)
+            writeCompletionHandlers[leftWChar.uuid] = checkCompletion
+            self.leftPeripheral?.writeValue(writeData, for: leftWChar, type: .withResponse)
         } else {
             print("writeData: leftWChar is nil, cannot write data to left peripheral.")
         }
 
         if let rightWChar = self.rightWChar {
-            self.rightPeripheral?.writeValue(writeData, for: rightWChar, type: .withoutResponse)
+            writeCompletionHandlers[rightWChar.uuid] = checkCompletion
+            self.rightPeripheral?.writeValue(writeData, for: rightWChar, type: .withResponse)
         } else {
             print("writeData: rightWChar is nil, cannot write data to right peripheral.")
         }
     }
     
     func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
+        // Call completion handler if one exists for this characteristic
+        if let completion = writeCompletionHandlers[characteristic.uuid] {
+            completion()
+            writeCompletionHandlers.removeValue(forKey: characteristic.uuid)
+        }
+        
         guard error == nil else {
             print("didWriteValueFor----characteristic---\(characteristic)---- \(error!)")
             return

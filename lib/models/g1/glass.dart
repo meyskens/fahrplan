@@ -190,6 +190,7 @@ class Glass {
     if (Platform.isIOS) {
       try {
         final lr = side == GlassSide.left ? 'L' : 'R';
+        // Native method returns immediately (fire-and-forget like EvenDemoApp)
         await _iosBluetoothChannel.invokeMethod('sendData', {
           'data': Uint8List.fromList(data),
           'lr': lr,
@@ -229,14 +230,12 @@ class Glass {
     if (Platform.isIOS) {
       try {
         final lr = side == GlassSide.left ? 'L' : 'R';
+        // Native method now waits for BLE write completion (like Android's withoutResponse: false)
         await _iosBluetoothChannel.invokeMethod('sendData', {
           'data': Uint8List.fromList(data),
           'lr': lr,
         });
         _lastActivityTime = DateTime.now();
-        // Note: ACK handling on iOS native side is not implemented yet
-        // For now, just add a small delay to simulate ACK wait
-        await Future.delayed(Duration(milliseconds: 100));
         return;
       } catch (e) {
         debugPrint(

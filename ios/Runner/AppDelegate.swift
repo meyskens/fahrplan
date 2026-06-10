@@ -66,8 +66,7 @@ import AVFoundation
         BluetoothManager.shared.disconnectFromGlasses(result: result)
       case "sendData":
         if let args = call.arguments as? [String: Any] {
-          BluetoothManager.shared.sendData(params: args)
-          result(nil)
+          BluetoothManager.shared.sendData(params: args, result: result)
         } else {
           result(FlutterError(code: "InvalidArgs", message: "data required", details: nil))
         }

@@ -461,7 +461,8 @@ class BluetoothManager {
 
   Future<void> _connectNativeIOS(String deviceName, String deviceId) async {
     try {
-      debugPrint('Connecting native iOS BluetoothManager for $deviceName (ID: $deviceId)');
+      debugPrint(
+          'Connecting native iOS BluetoothManager for $deviceName (ID: $deviceId)');
       // Pass the device UUID directly - native iOS can retrieve the peripheral by UUID
       await _iosBluetoothChannel.invokeMethod('connectToDevice', {
         'deviceName': deviceId,
@@ -566,6 +567,10 @@ class BluetoothManager {
 
   Future<void> sendCommandToGlasses(List<int> command,
       {bool needsAck = true, Duration delay = Duration.zero}) async {
+    // On iOS, we need to add a small delay between commands to ensure proper sequencing
+    // because the native method channel returns before the BLE write actually completes
+    const iosCommandDelay = Duration(milliseconds: 50);
+    
     if (leftGlass != null) {
       if (needsAck) {
         await leftGlass!.sendDataWithAck(command);
@@ -574,6 +579,10 @@ class BluetoothManager {
         if (delay > Duration.zero) {
           await Future.delayed(delay);
         }
+      }
+      // Add iOS-specific delay after left glass command
+      if (Platform.isIOS) {
+        await Future.delayed(iosCommandDelay);
       }
     }
     if (rightGlass != null) {
@@ -584,6 +593,10 @@ class BluetoothManager {
         if (delay > Duration.zero) {
           await Future.delayed(delay);
         }
+      }
+      // Add iOS-specific delay after right glass command
+      if (Platform.isIOS) {
+        await Future.delayed(iosCommandDelay);
       }
     }
   }
