@@ -133,7 +133,8 @@ class BluetoothManager {
       ];
     }
 
-    Map<Permission, PermissionStatus> statuses = await permissionsToRequest.request();
+    Map<Permission, PermissionStatus> statuses =
+        await permissionsToRequest.request();
 
     if (statuses.values.any((status) => status.isDenied)) {
       throw Exception(

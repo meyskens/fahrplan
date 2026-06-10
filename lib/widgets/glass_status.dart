@@ -41,10 +41,17 @@ class GlassStatusState extends State<GlassStatus> {
     });
   }
 
-  void _scanAndConnect() {
+  Future<void> _scanAndConnect() async {
     try {
-      bluetoothManager.startScanAndConnect(
-        onUpdate: (_) => _refreshData(),
+      await bluetoothManager.startScanAndConnect(
+        onUpdate: (message) {
+          _refreshData();
+          if (mounted && message.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(message)),
+            );
+          }
+        },
       );
     } catch (e) {
       debugPrint('Error in _scanAndConnect: $e');
