@@ -119,10 +119,12 @@ class BluetoothManager {
     }
 
     // iOS and Android use different Bluetooth permission models
+    // On iOS, Bluetooth permission is handled by CoreBluetooth when CBCentralManager
+    // is initialized. FlutterBluePlus.isAvailable will trigger the permission dialog.
+    // We only request location permission on iOS if needed.
     List<Permission> permissionsToRequest;
     if (Platform.isIOS) {
       permissionsToRequest = [
-        Permission.bluetooth,
         Permission.location,
       ];
     } else {
@@ -145,6 +147,22 @@ class BluetoothManager {
       await openAppSettings();
       throw Exception(
           'All permissions are required to use Bluetooth. Please enable them in the app settings.');
+    }
+
+    // On iOS, check Bluetooth authorization via FlutterBluePlus
+    // This will trigger the iOS permission dialog if not already granted
+    if (Platform.isIOS) {
+      try {
+        // This will throw or return false if Bluetooth permission is denied
+        bool isAvailable = await FlutterBluePlus.isAvailable;
+        if (!isAvailable) {
+          throw Exception(
+              'Bluetooth is not available. Please enable Bluetooth in Settings.');
+        }
+      } catch (e) {
+        throw Exception(
+            'Bluetooth permission is required. Please enable Bluetooth access in Settings.');
+      }
     }
   }
 
