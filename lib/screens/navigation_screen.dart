@@ -73,29 +73,62 @@ class _NavigationScreenState extends State<NavigationScreen> {
     super.dispose();
   }
 
+  /// Requests location authorization following Apple guidelines:
+  /// 1. First request "When In Use" authorization
+  /// 2. Then separately request "Always" authorization if needed
+  /// https://developer.apple.com/documentation/corelocation/requesting-authorization-to-use-location-services
+  Future<geo.LocationPermission> _requestLocationAuthorization() async {
+    // Check if location services are enabled
+    bool serviceEnabled = await geo.Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      debugPrint('Location services are disabled');
+      return geo.LocationPermission.denied;
+    }
+
+    // Check current permission status
+    geo.LocationPermission permission = await geo.Geolocator.checkPermission();
+
+    // Handle notDetermined state - request When In Use first
+    if (permission == geo.LocationPermission.denied) {
+      // Request When In Use authorization (preferred initial request)
+      permission = await geo.Geolocator.requestPermission();
+
+      if (permission == geo.LocationPermission.denied) {
+        debugPrint('Location permissions are denied');
+        return permission;
+      }
+    }
+
+    // Handle permanently denied
+    if (permission == geo.LocationPermission.deniedForever) {
+      debugPrint('Location permissions are permanently denied');
+      return permission;
+    }
+
+    // If we have When In Use, optionally upgrade to Always for background updates
+    // Per Apple guidelines: only request Always if your app needs it
+    // (e.g., for background navigation or location-based triggers)
+    if (permission == geo.LocationPermission.whileInUse) {
+      // Note: geolocator doesn't have a separate requestAlwaysAuthorization method
+      // The plugin will automatically request Always if the app has
+      // NSLocationAlwaysAndWhenInUseUsageDescription in Info.plist
+      // and we try to access location in the background.
+      // For explicit Always request, we would need platform-specific code.
+      debugPrint('Location permission: While In Use (can request Always if needed)');
+    }
+
+    return permission;
+  }
+
   Future<void> _getCurrentLocation() async {
     if (_mapboxMap == null) return;
 
     try {
-      // Check and request location permissions
-      bool serviceEnabled = await geo.Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        debugPrint('Location services are disabled');
-        return;
-      }
+      final permission = await _requestLocationAuthorization();
 
-      geo.LocationPermission permission =
-          await geo.Geolocator.checkPermission();
-      if (permission == geo.LocationPermission.denied) {
-        permission = await geo.Geolocator.requestPermission();
-        if (permission == geo.LocationPermission.denied) {
-          debugPrint('Location permissions are denied');
-          return;
-        }
-      }
-
-      if (permission == geo.LocationPermission.deniedForever) {
-        debugPrint('Location permissions are permanently denied');
+      // Only proceed if we have at least While In Use permission
+      if (permission == geo.LocationPermission.denied ||
+          permission == geo.LocationPermission.deniedForever) {
         return;
       }
 
@@ -130,6 +163,14 @@ class _NavigationScreenState extends State<NavigationScreen> {
     if (_mapboxMap == null) return;
 
     try {
+      // Request authorization before enabling location tracking
+      final permission = await _requestLocationAuthorization();
+      if (permission == geo.LocationPermission.denied ||
+          permission == geo.LocationPermission.deniedForever) {
+        debugPrint('Cannot start location tracking: permission denied');
+        return;
+      }
+
       // Enable location component to show user's current position
       await _mapboxMap!.location.updateSettings(LocationComponentSettings(
         enabled: true,
