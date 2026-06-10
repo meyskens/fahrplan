@@ -120,33 +120,29 @@ class BluetoothManager {
 
     // iOS and Android use different Bluetooth permission models.
     if (Platform.isIOS) {
+      // NOTE: On iOS we intentionally do NOT gate on permission_handler's
+      // `Permission.bluetooth` status. That value is unreliable on iOS and
+      // frequently reports `denied`/`permanentlyDenied` even when the user has
+      // granted Bluetooth access in Settings (it only becomes accurate after a
+      // CBCentralManager has been created and reported its authorization).
+      // The authoritative source of truth on iOS is FlutterBluePlus'
+      // adapterState, where `unauthorized` means access was actually denied.
       try {
-        // First, explicitly request Bluetooth permission on iOS
-        // This will show the system permission dialog if not already granted
-        final bluetoothStatus = await Permission.bluetooth.request();
-        if (bluetoothStatus.isPermanentlyDenied) {
-          await openAppSettings();
-          throw Exception(
-              'Bluetooth access is required. Please enable Bluetooth for this app in Settings.');
-        }
-        if (bluetoothStatus.isDenied) {
-          throw Exception(
-              'Bluetooth permissions are required to connect to the glasses.');
-        }
-
         final isSupported = await FlutterBluePlus.isSupported;
         if (!isSupported) {
           throw Exception('Bluetooth is not supported on this device.');
         }
 
-        final adapterState = await FlutterBluePlus.adapterState
-            .where((s) =>
-                s == BluetoothAdapterState.on ||
-                s == BluetoothAdapterState.off ||
-                s == BluetoothAdapterState.unauthorized)
-            .first
-            .timeout(const Duration(seconds: 10),
-                onTimeout: () => BluetoothAdapterState.unknown);
+        // On iOS the adapterState stream emits transient `unknown` and even
+        // `unauthorized`/`off` values while CBCentralManager is still
+        // initializing, before settling on the real state. Reacting to the
+        // first non-`unknown` emission therefore produces false negatives
+        // (e.g. opening Settings even though Bluetooth is on and authorized).
+        //
+        // Instead, wait for the state to settle: keep sampling until we either
+        // see `on` (success) or the same terminal state twice in a row, with an
+        // overall timeout.
+        final adapterState = await _awaitSettledIosAdapterState();
 
         if (adapterState == BluetoothAdapterState.unauthorized) {
           await openAppSettings();
@@ -185,6 +181,67 @@ class BluetoothManager {
     if (statuses.values.any((status) => status.isDenied)) {
       throw Exception(
           'Bluetooth permissions are required to connect to the glasses.');
+    }
+  }
+
+  /// Waits for the iOS Bluetooth adapter state to settle.
+  ///
+  /// FlutterBluePlus emits transient states (`unknown`, and sometimes a brief
+  /// `unauthorized`/`off`) while CBCentralManager initializes, before settling
+  /// on the real state. Reacting to the first emission produces false negatives
+  /// (e.g. opening Settings even though Bluetooth is on and authorized).
+  ///
+  /// This listens to the adapterState stream and:
+  ///  - returns immediately once it sees `on`;
+  ///  - for a non-`on` terminal state (`off`/`unauthorized`), waits for a short
+  ///    settle window in case a later `on` arrives, and only trusts the
+  ///    terminal state if nothing better shows up;
+  ///  - gives up after an overall timeout, returning the last observed state.
+  Future<BluetoothAdapterState> _awaitSettledIosAdapterState() async {
+    const overallTimeout = Duration(seconds: 10);
+    const settleWindow = Duration(seconds: 2);
+
+    final completer = Completer<BluetoothAdapterState>();
+    BluetoothAdapterState last = BluetoothAdapterState.unknown;
+    Timer? settleTimer;
+    StreamSubscription<BluetoothAdapterState>? sub;
+
+    void finish(BluetoothAdapterState state) {
+      if (!completer.isCompleted) {
+        completer.complete(state);
+      }
+    }
+
+    sub = FlutterBluePlus.adapterState.listen((state) {
+      last = state;
+
+      if (state == BluetoothAdapterState.on) {
+        settleTimer?.cancel();
+        finish(state);
+        return;
+      }
+
+      if (state == BluetoothAdapterState.off ||
+          state == BluetoothAdapterState.unauthorized) {
+        // Don't trust a terminal non-`on` state immediately; give the adapter a
+        // brief window to report `on` (it often emits unknown/off first during
+        // initialization). If still terminal after the window, accept it.
+        settleTimer?.cancel();
+        settleTimer = Timer(settleWindow, () => finish(state));
+      } else {
+        // `unknown`/`turningOn`/etc. — not settled, keep waiting.
+        settleTimer?.cancel();
+      }
+    });
+
+    try {
+      return await completer.future.timeout(
+        overallTimeout,
+        onTimeout: () => last,
+      );
+    } finally {
+      settleTimer?.cancel();
+      await sub.cancel();
     }
   }
 
