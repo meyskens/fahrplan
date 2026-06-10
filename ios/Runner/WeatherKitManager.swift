@@ -149,16 +149,16 @@ import Flutter
                 // Add hourly forecast if available
                 if weather.hourlyForecast.count > 0 {
                     let hourlyData = weather.hourlyForecast.prefix(24).map { hour -> [String: Any] in
-                        return [
-                            "timestamp": Int(hour.date.timeIntervalSince1970),
-                            "temp": Int(hour.temperature.converted(to: .kelvin).value),
-                            "conditionCode": mapWeatherCondition(hour.condition),
-                            "humidity": Int(hour.humidity * 100),
-                            "windSpeed": Int(hour.wind.speed.converted(to: .kilometersPerHour).value),
-                            "windDirection": Int(hour.wind.direction.value),
-                            "uvIndex": hour.uvIndex.value,
-                            "precipProbability": Int((hour.precipitationChance ?? 0) * 100)
-                        ]
+                        var hourData: [String: Any] = [:]
+                        hourData["timestamp"] = Int(hour.date.timeIntervalSince1970)
+                        hourData["temp"] = Int(hour.temperature.converted(to: .kelvin).value)
+                        hourData["conditionCode"] = mapWeatherCondition(hour.condition)
+                        hourData["humidity"] = Int(hour.humidity * 100)
+                        hourData["windSpeed"] = Int(hour.wind.speed.converted(to: .kilometersPerHour).value)
+                        hourData["windDirection"] = Int(hour.wind.direction.value)
+                        hourData["uvIndex"] = hour.uvIndex.value
+                        hourData["precipProbability"] = Int((hour.precipitationChance ?? 0) * 100)
+                        return hourData
                     }
                     weatherData["hourly"] = hourlyData
                 }
@@ -166,19 +166,23 @@ import Flutter
                 // Add daily forecast if available
                 if weather.dailyForecast.count > 0 {
                     let dailyData = weather.dailyForecast.prefix(7).map { day -> [String: Any] in
-                        return [
-                            "timestamp": Int(day.date.timeIntervalSince1970),
-                            "minTemp": Int(day.lowTemperature.converted(to: .kelvin).value),
-                            "maxTemp": Int(day.highTemperature.converted(to: .kelvin).value),
-                            "conditionCode": mapWeatherCondition(day.condition),
-                            "humidity": Int(day.humidity * 100),
-                            "windSpeed": Int(day.wind.speed.converted(to: .kilometersPerHour).value),
-                            "windDirection": Int(day.wind.direction.value),
-                            "uvIndex": day.uvIndex.value,
-                            "precipProbability": Int((day.precipitationChance ?? 0) * 100),
-                            "sunRise": day.sun.sunrise != nil ? Int(day.sun.sunrise!.timeIntervalSince1970) : nil,
-                            "sunSet": day.sun.sunset != nil ? Int(day.sun.sunset!.timeIntervalSince1970) : nil
-                        ].compactMapValues { $0 }
+                        var dayData: [String: Any] = [:]
+                        dayData["timestamp"] = Int(day.date.timeIntervalSince1970)
+                        dayData["minTemp"] = Int(day.lowTemperature.converted(to: .kelvin).value)
+                        dayData["maxTemp"] = Int(day.highTemperature.converted(to: .kelvin).value)
+                        dayData["conditionCode"] = mapWeatherCondition(day.condition)
+                        dayData["humidity"] = Int(day.humidity * 100)
+                        dayData["windSpeed"] = Int(day.wind.speed.converted(to: .kilometersPerHour).value)
+                        dayData["windDirection"] = Int(day.wind.direction.value)
+                        dayData["uvIndex"] = day.uvIndex.value
+                        dayData["precipProbability"] = Int((day.precipitationChance ?? 0) * 100)
+                        if let sunrise = day.sun.sunrise {
+                            dayData["sunRise"] = Int(sunrise.timeIntervalSince1970)
+                        }
+                        if let sunset = day.sun.sunset {
+                            dayData["sunSet"] = Int(sunset.timeIntervalSince1970)
+                        }
+                        return dayData
                     }
                     weatherData["forecasts"] = dailyData
                 }
