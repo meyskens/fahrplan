@@ -21,6 +21,18 @@
 		B1C2D3E61F9F90330051A5D5 /* GattProtocal.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E11F9F90330051A5D5 /* GattProtocal.swift */; };
 		B1C2D3E71F9F90330051A5D6 /* SpeechStreamRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E01F9F90330051A5D6 /* SpeechStreamRecognizer.swift */; };
 		C1D2E3F61A8B70440062B8E5 /* PcmConverter.m in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3F51A8B70440062B8E5 /* PcmConverter.m */; };
+		D1E2F3BC1B9C81550073CA0D /* lc3.c in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3A41B9C81550073C9F5 /* lc3.c */; };
+		D1E2F3BD1B9C81550073CA0E /* attdet.c in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3A61B9C81550073C9F7 /* attdet.c */; };
+		D1E2F3BE1B9C81550073CA0F /* bits.c in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3A81B9C81550073C9F9 /* bits.c */; };
+		D1E2F3BF1B9C81550073CA10 /* bwdet.c in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3AA1B9C81550073C9FB /* bwdet.c */; };
+		D1E2F3C01B9C81550073CA11 /* energy.c in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3AC1B9C81550073C9FD /* energy.c */; };
+		D1E2F3C11B9C81550073CA12 /* ltpf.c in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3AE1B9C81550073C9FF /* ltpf.c */; };
+		D1E2F3C21B9C81550073CA13 /* mdct.c in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3B01B9C81550073CA01 /* mdct.c */; };
+		D1E2F3C31B9C81550073CA14 /* plc.c in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3B21B9C81550073CA03 /* plc.c */; };
+		D1E2F3C41B9C81550073CA15 /* sns.c in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3B41B9C81550073CA05 /* sns.c */; };
+		D1E2F3C51B9C81550073CA16 /* spec.c in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3B61B9C81550073CA07 /* spec.c */; };
+		D1E2F3C61B9C81550073CA17 /* tables.c in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3B81B9C81550073CA09 /* tables.c */; };
+		D1E2F3C71B9C81550073CA18 /* tns.c in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3BA1B9C81550073CA0B /* tns.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -70,6 +82,30 @@
 		B1C2D3E31F9F90330051A5D3 /* BluetoothManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothManager.swift; sourceTree = "<group>"; };
 		C1D2E3F41A8B70440062B8E4 /* PcmConverter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PcmConverter.h; sourceTree = "<group>"; };
 		C1D2E3F51A8B70440062B8E5 /* PcmConverter.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PcmConverter.m; sourceTree = "<group>"; };
+		D1E2F3A41B9C81550073C9F5 /* lc3.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = lc3.c; path = lc3/lc3.c; sourceTree = "<group>"; };
+		D1E2F3A51B9C81550073C9F6 /* lc3.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = lc3.h; path = lc3/lc3.h; sourceTree = "<group>"; };
+		D1E2F3A61B9C81550073C9F7 /* attdet.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = attdet.c; path = lc3/attdet.c; sourceTree = "<group>"; };
+		D1E2F3A71B9C81550073C9F8 /* attdet.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = attdet.h; path = lc3/attdet.h; sourceTree = "<group>"; };
+		D1E2F3A81B9C81550073C9F9 /* bits.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = bits.c; path = lc3/bits.c; sourceTree = "<group>"; };
+		D1E2F3A91B9C81550073C9FA /* bits.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = bits.h; path = lc3/bits.h; sourceTree = "<group>"; };
+		D1E2F3AA1B9C81550073C9FB /* bwdet.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = bwdet.c; path = lc3/bwdet.c; sourceTree = "<group>"; };
+		D1E2F3AB1B9C81550073C9FC /* bwdet.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = bwdet.h; path = lc3/bwdet.h; sourceTree = "<group>"; };
+		D1E2F3AC1B9C81550073C9FD /* energy.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = energy.c; path = lc3/energy.c; sourceTree = "<group>"; };
+		D1E2F3AD1B9C81550073C9FE /* energy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = energy.h; path = lc3/energy.h; sourceTree = "<group>"; };
+		D1E2F3AE1B9C81550073C9FF /* ltpf.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = ltpf.c; path = lc3/ltpf.c; sourceTree = "<group>"; };
+		D1E2F3AF1B9C81550073CA00 /* ltpf.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ltpf.h; path = lc3/ltpf.h; sourceTree = "<group>"; };
+		D1E2F3B01B9C81550073CA01 /* mdct.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = mdct.c; path = lc3/mdct.c; sourceTree = "<group>"; };
+		D1E2F3B11B9C81550073CA02 /* mdct.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = mdct.h; path = lc3/mdct.h; sourceTree = "<group>"; };
+		D1E2F3B21B9C81550073CA03 /* plc.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = plc.c; path = lc3/plc.c; sourceTree = "<group>"; };
+		D1E2F3B31B9C81550073CA04 /* plc.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = plc.h; path = lc3/plc.h; sourceTree = "<group>"; };
+		D1E2F3B41B9C81550073CA05 /* sns.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = sns.c; path = lc3/sns.c; sourceTree = "<group>"; };
+		D1E2F3B51B9C81550073CA06 /* sns.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = sns.h; path = lc3/sns.h; sourceTree = "<group>"; };
+		D1E2F3B61B9C81550073CA07 /* spec.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = spec.c; path = lc3/spec.c; sourceTree = "<group>"; };
+		D1E2F3B71B9C81550073CA08 /* spec.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = spec.h; path = lc3/spec.h; sourceTree = "<group>"; };
+		D1E2F3B81B9C81550073CA09 /* tables.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = tables.c; path = lc3/tables.c; sourceTree = "<group>"; };
+		D1E2F3B91B9C81550073CA0A /* tables.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = tables.h; path = lc3/tables.h; sourceTree = "<group>"; };
+		D1E2F3BA1B9C81550073CA0B /* tns.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = tns.c; path = lc3/tns.c; sourceTree = "<group>"; };
+		D1E2F3BB1B9C81550073CA0C /* tns.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = tns.h; path = lc3/tns.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -141,6 +177,30 @@
 				B1C2D3E01F9F90330051A5D6 /* SpeechStreamRecognizer.swift */,
 				C1D2E3F41A8B70440062B8E4 /* PcmConverter.h */,
 				C1D2E3F51A8B70440062B8E5 /* PcmConverter.m */,
+				D1E2F3A41B9C81550073C9F5 /* lc3.c */,
+				D1E2F3A51B9C81550073C9F6 /* lc3.h */,
+				D1E2F3A61B9C81550073C9F7 /* attdet.c */,
+				D1E2F3A71B9C81550073C9F8 /* attdet.h */,
+				D1E2F3A81B9C81550073C9F9 /* bits.c */,
+				D1E2F3A91B9C81550073C9FA /* bits.h */,
+				D1E2F3AA1B9C81550073C9FB /* bwdet.c */,
+				D1E2F3AB1B9C81550073C9FC /* bwdet.h */,
+				D1E2F3AC1B9C81550073C9FD /* energy.c */,
+				D1E2F3AD1B9C81550073C9FE /* energy.h */,
+				D1E2F3AE1B9C81550073C9FF /* ltpf.c */,
+				D1E2F3AF1B9C81550073CA00 /* ltpf.h */,
+				D1E2F3B01B9C81550073CA01 /* mdct.c */,
+				D1E2F3B11B9C81550073CA02 /* mdct.h */,
+				D1E2F3B21B9C81550073CA03 /* plc.c */,
+				D1E2F3B31B9C81550073CA04 /* plc.h */,
+				D1E2F3B41B9C81550073CA05 /* sns.c */,
+				D1E2F3B51B9C81550073CA06 /* sns.h */,
+				D1E2F3B61B9C81550073CA07 /* spec.c */,
+				D1E2F3B71B9C81550073CA08 /* spec.h */,
+				D1E2F3B81B9C81550073CA09 /* tables.c */,
+				D1E2F3B91B9C81550073CA0A /* tables.h */,
+				D1E2F3BA1B9C81550073CA0B /* tns.c */,
+				D1E2F3BB1B9C81550073CA0C /* tns.h */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -308,6 +368,18 @@
 				B1C2D3E61F9F90330051A5D5 /* GattProtocal.swift in Sources */,
 				B1C2D3E71F9F90330051A5D6 /* SpeechStreamRecognizer.swift in Sources */,
 				C1D2E3F61A8B70440062B8E5 /* PcmConverter.m in Sources */,
+				D1E2F3BC1B9C81550073CA0D /* lc3.c in Sources */,
+				D1E2F3BD1B9C81550073CA0E /* attdet.c in Sources */,
+				D1E2F3BE1B9C81550073CA0F /* bits.c in Sources */,
+				D1E2F3BF1B9C81550073CA10 /* bwdet.c in Sources */,
+				D1E2F3C01B9C81550073CA11 /* energy.c in Sources */,
+				D1E2F3C11B9C81550073CA12 /* ltpf.c in Sources */,
+				D1E2F3C21B9C81550073CA13 /* mdct.c in Sources */,
+				D1E2F3C31B9C81550073CA14 /* plc.c in Sources */,
+				D1E2F3C41B9C81550073CA15 /* sns.c in Sources */,
+				D1E2F3C51B9C81550073CA16 /* spec.c in Sources */,
+				D1E2F3C61B9C81550073CA17 /* tables.c in Sources */,
+				D1E2F3C71B9C81550073CA18 /* tns.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
