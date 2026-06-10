@@ -118,51 +118,60 @@ class BluetoothManager {
       return;
     }
 
-    // iOS and Android use different Bluetooth permission models
-    // On iOS, Bluetooth permission is handled by CoreBluetooth when CBCentralManager
-    // is initialized. FlutterBluePlus.isAvailable will trigger the permission dialog.
-    // We only request location permission on iOS if needed.
-    List<Permission> permissionsToRequest;
-    if (Platform.isIOS) {
-      permissionsToRequest = [
-        Permission.location,
-      ];
-    } else {
-      permissionsToRequest = [
-        Permission.bluetoothScan,
-        Permission.bluetoothConnect,
-        Permission.location,
-      ];
-    }
-
-    Map<Permission, PermissionStatus> statuses =
-        await permissionsToRequest.request();
-
-    if (statuses.values.any((status) => status.isDenied)) {
-      throw Exception(
-          'All permissions are required to use Bluetooth. Please enable them in the app settings.');
-    }
-
-    if (statuses.values.any((status) => status.isPermanentlyDenied)) {
-      await openAppSettings();
-      throw Exception(
-          'All permissions are required to use Bluetooth. Please enable them in the app settings.');
-    }
-
-    // On iOS, check Bluetooth authorization via FlutterBluePlus
-    // This will trigger the iOS permission dialog if not already granted
+    // iOS and Android use different Bluetooth permission models.
     if (Platform.isIOS) {
       try {
-        // This will throw or return false if Bluetooth permission is denied
-        bool isAvailable = await FlutterBluePlus.isAvailable;
-        if (!isAvailable) {
-          throw Exception(
-              'Bluetooth is not available. Please enable Bluetooth in Settings.');
+        final isSupported = await FlutterBluePlus.isSupported;
+        if (!isSupported) {
+          throw Exception('Bluetooth is not supported on this device.');
         }
+
+        final adapterState = await FlutterBluePlus.adapterState
+            .where((s) =>
+                s == BluetoothAdapterState.on ||
+                s == BluetoothAdapterState.off ||
+                s == BluetoothAdapterState.unauthorized)
+            .first
+            .timeout(const Duration(seconds: 10),
+                onTimeout: () => BluetoothAdapterState.unknown);
+
+        if (adapterState == BluetoothAdapterState.unauthorized) {
+          await openAppSettings();
+          throw Exception(
+              'Bluetooth access is required. Please enable Bluetooth for this app in Settings.');
+        }
+
+        if (adapterState == BluetoothAdapterState.off) {
+          throw Exception(
+              'Bluetooth is turned off. Please enable Bluetooth in Settings.');
+        }
+      } on Exception {
+        rethrow;
       } catch (e) {
         throw Exception(
             'Bluetooth permission is required. Please enable Bluetooth access in Settings.');
       }
+      return;
+    }
+
+    // Android: location is only needed on older versions for BLE scanning.
+    final permissionsToRequest = <Permission>[
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.location,
+    ];
+
+    final statuses = await permissionsToRequest.request();
+
+    if (statuses.values.any((status) => status.isPermanentlyDenied)) {
+      await openAppSettings();
+      throw Exception(
+          'Bluetooth permissions are required. Please enable them in the app settings.');
+    }
+
+    if (statuses.values.any((status) => status.isDenied)) {
+      throw Exception(
+          'Bluetooth permissions are required to connect to the glasses.');
     }
   }
 
