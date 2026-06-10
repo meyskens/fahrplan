@@ -42,8 +42,10 @@ import AVFoundation
       // Setup event channels for Bluetooth data from glasses
       setupBluetoothEventChannels(controller: controller)
 
-      // Setup WeatherKit for weather updates
-      WeatherKitManager.shared.setupChannel(with: controller)
+      // Setup WeatherKit for weather updates (iOS 16.0+)
+      if #available(iOS 16.0, *) {
+        WeatherKitManager.shared.setupChannel(with: controller)
+      }
     }
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
@@ -69,7 +71,7 @@ import AVFoundation
         BluetoothManager.shared.disconnectFromGlasses(result: result)
       case "sendData":
         if let args = call.arguments as? [String: Any] {
-          BluetoothManager.shared.sendData(params: args)
+          BluetoothManager.shared.sendData(params: args, result: result)
         } else {
           result(FlutterError(code: "InvalidArgs", message: "data required", details: nil))
         }
