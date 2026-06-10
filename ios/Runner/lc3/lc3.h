@@ -112,12 +112,12 @@
 #ifndef __LC3_H
 #define __LC3_H
 
+#include <stdint.h>
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
-#include <stdbool.h>
 
 #include "lc3_private.h"
 

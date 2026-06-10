@@ -19,6 +19,10 @@
 #ifndef __LC3_PRIVATE_H
 #define __LC3_PRIVATE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -159,5 +163,8 @@ struct lc3_decoder {
         float __x[LC3_DECODER_BUFFER_COUNT(dt_us, sr_hz)-1]; \
     }
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LC3_PRIVATE_H */
