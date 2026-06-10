@@ -117,12 +117,23 @@ class BluetoothManager {
     if (!Platform.isAndroid && !Platform.isIOS) {
       return;
     }
-    Map<Permission, PermissionStatus> statuses = await [
-      //Permission.bluetooth,
-      Permission.bluetoothScan,
-      Permission.bluetoothConnect,
-      Permission.location,
-    ].request();
+
+    // iOS and Android use different Bluetooth permission models
+    List<Permission> permissionsToRequest;
+    if (Platform.isIOS) {
+      permissionsToRequest = [
+        Permission.bluetooth,
+        Permission.location,
+      ];
+    } else {
+      permissionsToRequest = [
+        Permission.bluetoothScan,
+        Permission.bluetoothConnect,
+        Permission.location,
+      ];
+    }
+
+    Map<Permission, PermissionStatus> statuses = await permissionsToRequest.request();
 
     if (statuses.values.any((status) => status.isDenied)) {
       throw Exception(
