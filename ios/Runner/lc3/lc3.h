@@ -114,12 +114,11 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "lc3_private.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "lc3_private.h"
 
 
 /**
