@@ -830,8 +830,8 @@ int lc3_sns_get_data(lc3_bits_t *bits, struct lc3_sns_data *data)
     /* --- Codebooks --- */
 
     *data = (struct lc3_sns_data){
-        .lfcb = lc3_get_bits(bits, 5),
-        .hfcb = lc3_get_bits(bits, 5)
+        .lfcb = (int)lc3_get_bits(bits, 5),
+        .hfcb = (int)lc3_get_bits(bits, 5)
     };
 
     /* --- Shape, gain and vectors --- */
