@@ -63,7 +63,8 @@ enum lc3_bandwidth lc3_bwdet_run(
 
     const struct region *bwr = bws_table[dt][bwn-1];
 
-    for (enum lc3_bandwidth bw = bw0; bw < bwn; bw++) {
+    for (int bw_i = bw0; bw_i < bwn; bw_i++) {
+        enum lc3_bandwidth bw = (enum lc3_bandwidth)bw_i;
         int i = bwr[bw].is, ie = bwr[bw].ie;
         int n = ie - i;
 
@@ -72,7 +73,7 @@ enum lc3_bandwidth lc3_bwdet_run(
             se += e[i];
 
         if (se >= (10 << (bw == LC3_BANDWIDTH_NB)) * n)
-            bw0 = bw + 1;
+            bw0 = (enum lc3_bandwidth)(bw_i + 1);
     }
 
     /* --- Stage 2 ---
