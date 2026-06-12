@@ -611,8 +611,8 @@ class _DebugPageSate extends State<DebugPage> {
                 child: const Text("Toggle Wear Detection"),
               ),
               ElevatedButton(
-                onPressed: _setHeadUpAngle,
-                child: const Text("Set Head-Up Angle (30°)"),
+                onPressed: _showHeadUpAngleDialog,
+                child: const Text("Set Head-Up Angle"),
               ),
               ElevatedButton(
                 onPressed: _turnDisplayOn,
@@ -932,11 +932,59 @@ class _DebugPageSate extends State<DebugPage> {
     }
   }
 
-  void _setHeadUpAngle() async {
+  void _showHeadUpAngleDialog() {
+    double selectedAngle = 30;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Set Head-Up Angle'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('${selectedAngle.round()}°'),
+                  Slider(
+                    value: selectedAngle,
+                    min: 0,
+                    max: 60,
+                    divisions: 60,
+                    label: '${selectedAngle.round()}°',
+                    onChanged: (double value) {
+                      setDialogState(() {
+                        selectedAngle = value;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    await _setHeadUpAngle(selectedAngle.round());
+                  },
+                  child: const Text('Set'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _setHeadUpAngle(int angle) async {
     if (bluetoothManager.isConnected) {
-      await bluetoothManager.setHeadUpAngle(30);
+      await bluetoothManager.setHeadUpAngle(angle);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Head-up angle set to 30°')),
+        SnackBar(content: Text('Head-up angle set to $angle°')),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
