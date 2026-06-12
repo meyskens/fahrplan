@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:fahrplan/models/g1/setup.dart';
@@ -30,12 +31,20 @@ class NotificationSettingsPageState extends State<NotificationSettingsPage> {
   @override
   void initState() {
     super.initState();
-    fetchApps();
     selectedAppsBox = Hive.box('fahrplanNotificationApps');
     searchController.addListener(_filterApps);
+    fetchApps();
   }
 
   void fetchApps() async {
+    // iOS does not allow listing installed apps due to sandboxing restrictions
+    if (Platform.isIOS) {
+      setState(() {
+        _loading = false;
+      });
+      return;
+    }
+
     List<ApplicationInfo> installedApps =
         await AndroidPackageManager().getInstalledApplications() ?? [];
 
@@ -108,6 +117,40 @@ class NotificationSettingsPageState extends State<NotificationSettingsPage> {
         ),
       );
     }
+
+    // iOS does not allow listing installed apps due to sandboxing restrictions
+    if (Platform.isIOS) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Notification Settings'),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.info_outline, size: 48, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
+                  'App notification settings are not available on iOS',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Due to iOS sandboxing restrictions, it is not possible to list installed apps. '
+                  'All app notifications will be mirrored to the G1 glasses.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Notification Settings'),
