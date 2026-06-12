@@ -30,7 +30,8 @@ abstract class WhisperService {
         print("Using iOS native speech recognition");
         return WhisperIOSService();
       }
-      print("iOS native mode selected on non-iOS, falling back to local Whisper");
+      print(
+          "iOS native mode selected on non-iOS, falling back to local Whisper");
     }
 
     return WhisperLocalService();

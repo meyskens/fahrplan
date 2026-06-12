@@ -92,9 +92,9 @@ class BluetoothReciever {
 
   void _feedNativeSpeechData(List<int> lc3Data) {
     if (!Platform.isIOS || lc3Data.isEmpty) return;
-    _iosSpeechChannel
-        .invokeMethod('appendLC3Audio', {'data': Uint8List.fromList(lc3Data)})
-        .catchError((e) => debugPrint('appendLC3Audio error: $e'));
+    _iosSpeechChannel.invokeMethod('appendLC3Audio', {
+      'data': Uint8List.fromList(lc3Data)
+    }).catchError((e) => debugPrint('appendLC3Audio error: $e'));
   }
 
   void _handleIOSSpeechTranscription(String transcription) async {
@@ -161,7 +161,8 @@ class BluetoothReciever {
         await _controlNativeSpeechRecognition(false);
         break;
       case 1:
-        debugPrint('[$side] Page ${side == GlassSide.left ? 'up' : 'down'} control');
+        debugPrint(
+            '[$side] Page ${side == GlassSide.left ? 'up' : 'down'} control');
         await bt.setMicrophone(false);
         voiceCollectorAI.isRecording = false;
 
