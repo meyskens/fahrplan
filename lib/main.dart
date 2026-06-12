@@ -24,14 +24,16 @@ import 'screens/home_screen.dart';
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
-late AudioHandler _audioHandler;
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Enable iOS state restoration for BLE - must be done before any BLE operations
   // This allows the app to be woken up by BLE events even after being killed by iOS
   await FlutterBluePlus.setOptions(restoreState: true);
+
+  // Force FBP to create its CBCentralManager early so iOS can deliver
+  // willRestoreState before we explicitly reconnect.
+  unawaited(FlutterBluePlus.adapterState.first);
 
   flutterLocalNotificationsPlugin.initialize(
     InitializationSettings(
@@ -60,7 +62,7 @@ void main() async {
   var callbackHandle = PluginUtilities.getCallbackHandle(backgroundMain);
   channel.invokeMethod('startService', callbackHandle?.toRawHandle());
 
-  _audioHandler = await AudioService.init(
+  await AudioService.init(
     builder: () => MyAudioHandler(),
     config: AudioServiceConfig(
       androidNotificationChannelId: 'dev.maartje.fahrplan.channel.audio',
@@ -70,36 +72,12 @@ void main() async {
 
   final session = await AudioSession.instance;
   await session.configure(AudioSessionConfiguration.speech());
-  session.setActive(true);
 
   runApp(const App());
-
-  // Only start audio handler if background audio keep-alive is enabled
-  if (UiPerfs.singleton.backgroundAudioKeepAlive) {
-    _audioHandler.play();
-  }
 }
 
 void backgroundMain() {
   WidgetsFlutterBinding.ensureInitialized();
-}
-
-class AppLifecycleObserver extends WidgetsBindingObserver {
-  static const MethodChannel _settingsChannel =
-      MethodChannel('dev.maartje.fahrplan/settings');
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (Platform.isIOS) {
-      if (state == AppLifecycleState.paused) {
-        // App is going to background - notify iOS native code of audio setting
-        final enabled = UiPerfs.singleton.backgroundAudioKeepAlive;
-        _settingsChannel.invokeMethod('setBackgroundAudioEnabled', {
-          'enabled': enabled,
-        });
-      }
-    }
-  }
 }
 
 class AppRetainWidget extends StatefulWidget {
@@ -113,19 +91,6 @@ class AppRetainWidget extends StatefulWidget {
 
 class _AppRetainWidgetState extends State<AppRetainWidget> {
   final _channel = const MethodChannel('dev.maartje.fahrplan/app_retain');
-  final _lifecycleObserver = AppLifecycleObserver();
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(_lifecycleObserver);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(_lifecycleObserver);
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {

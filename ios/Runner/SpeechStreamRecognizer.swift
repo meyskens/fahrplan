@@ -6,6 +6,7 @@
 //
 import AVFoundation
 import Speech
+import Flutter
 
 class SpeechStreamRecognizer {
     static let shared = SpeechStreamRecognizer()
@@ -36,7 +37,11 @@ class SpeechStreamRecognizer {
     
     private var lastTranscription: SFTranscription? // cache to make contrast between near results
     private var cacheString = "" // cache stream recognized formattedString
-    
+
+    var speechEventSink: FlutterEventSink?
+    private var stopCompletion: ((String) -> Void)?
+    private var isFinishing = false
+
     enum RecognizerError: Error {
         case nilRecognizer
         case notAuthorizedToRecognize
@@ -78,20 +83,21 @@ class SpeechStreamRecognizer {
         lastTranscription = nil
         self.lastRecognizedText = ""
         cacheString = ""
-        
-        let localIdentifier = languageDic[identifier]
+        isFinishing = false
+
+        let localIdentifier = languageDic[identifier.uppercased()] ?? identifier
         print("startRecognition----localIdentifier----\(localIdentifier)--identifier---\(identifier)---")
-        recognizer = SFSpeechRecognizer(locale: Locale(identifier: localIdentifier ?? "en-US"))  // en-US zh-CN en-US
+        recognizer = SFSpeechRecognizer(locale: Locale(identifier: localIdentifier))  // en-US zh-CN en-US
         guard let recognizer = recognizer else {
             print("Speech recognizer is not available")
             return
         }
-        
+
         guard recognizer.isAvailable else {
             print("startRecognition recognizer is not available")
             return
         }
-        
+
         let audioSession = AVAudioSession.sharedInstance()
         do {
             //try audioSession.setCategory(.record)
@@ -101,7 +107,7 @@ class SpeechStreamRecognizer {
             print("Error setting up audio session: \(error)")
             return
         }
-        
+
         recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
         guard let recognitionRequest = recognitionRequest else {
             print("Failed to create recognition request")
@@ -109,54 +115,72 @@ class SpeechStreamRecognizer {
         }
         recognitionRequest.shouldReportPartialResults = true //true
         recognitionRequest.requiresOnDeviceRecognition = true
-        
+
         recognitionTask = recognizer.recognitionTask(with: recognitionRequest) { [weak self] (result, error) in
             guard let self = self else { return }
             if let error = error {
                 print("SpeechRecognizer Recognition error: \(error)")
+                self.finishRecognition()
             } else if let result = result {
-                    
                 let currentTranscription = result.bestTranscription
-                if lastTranscription == nil {
-                    cacheString = currentTranscription.formattedString
+                if self.lastTranscription == nil {
+                    self.cacheString = currentTranscription.formattedString
                 } else {
-                    
-                    if (currentTranscription.segments.count < lastTranscription?.segments.count ?? 1 || currentTranscription.segments.count == 1) {
-                        self.lastRecognizedText += cacheString
-                        cacheString = ""
+                    if (currentTranscription.segments.count < self.lastTranscription?.segments.count ?? 1 || currentTranscription.segments.count == 1) {
+                        self.lastRecognizedText += self.cacheString
+                        self.cacheString = ""
                     } else {
-                        cacheString = currentTranscription.formattedString
+                        self.cacheString = currentTranscription.formattedString
                     }
                 }
-                
-                lastTranscription = result.bestTranscription
+
+                self.lastTranscription = result.bestTranscription
+
+                if result.isFinal {
+                    self.finishRecognition()
+                } else {
+                    self.reportPartial()
+                }
             }
         }
     }
     
-    func stopRecognition() {
-
+    func stopRecognition(completion: ((String) -> Void)? = nil) {
         print("stopRecognition-----self.lastRecognizedText-------\(self.lastRecognizedText)------cacheString----------\(cacheString)---")
-        self.lastRecognizedText += cacheString
+        self.stopCompletion = completion
+        finishRecognition()
+    }
+
+    private func reportPartial() {
+        let partial = (lastRecognizedText + cacheString).trimmingCharacters(in: .whitespaces)
+        DispatchQueue.main.async {
+            self.speechEventSink?(["type": "partial", "text": partial])
+        }
+    }
+
+    private func finishRecognition() {
+        guard !isFinishing else { return }
+        isFinishing = true
+        let finalText = (lastRecognizedText + cacheString).trimmingCharacters(in: .whitespaces)
 
         DispatchQueue.main.async {
-            if let sink = BluetoothManager.shared.blueSpeechSink {
-                sink(["script": self.lastRecognizedText])
-            } else {
-                print("blueSpeechSink is nil, cannot forward speech to Flutter")
-            }
+            self.stopCompletion?(finalText)
+            self.stopCompletion = nil
+            self.speechEventSink?(["type": "final", "text": finalText])
         }
-        
+
         recognitionTask?.cancel()
         do {
             try AVAudioSession.sharedInstance().setActive(false)
         } catch {
             print("Error stop audio session: \(error)")
-            return
         }
         recognitionRequest = nil
         recognitionTask = nil
         recognizer = nil
+        lastTranscription = nil
+        cacheString = ""
+        lastRecognizedText = ""
     }
     
     func appendPCMData(_ pcmData: Data) {

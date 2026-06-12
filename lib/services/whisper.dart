@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:dart_openai/dart_openai.dart';
 import 'package:fahrplan/models/fahrplan/whispermodel.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -23,6 +24,13 @@ abstract class WhisperService {
     if (mode == "azure") {
       print("Using Azure Speech service");
       return WhisperAzureSpeechService();
+    }
+    if (mode == "ios_native") {
+      if (Platform.isIOS) {
+        print("Using iOS native speech recognition");
+        return WhisperIOSService();
+      }
+      print("iOS native mode selected on non-iOS, falling back to local Whisper");
     }
 
     return WhisperLocalService();
@@ -1030,6 +1038,111 @@ class WhisperRemoteService implements WhisperService {
       } catch (e) {
         debugPrint('Error deleting temp file: $e');
       }
+    }
+  }
+}
+
+class WhisperIOSService implements WhisperService {
+  static const MethodChannel _speechChannel =
+      MethodChannel('dev.maartje.fahrplan/speech');
+  static const EventChannel _speechEventChannel =
+      EventChannel('dev.maartje.fahrplan/speech_events');
+
+  Stream<Map<dynamic, dynamic>>? _eventStream;
+
+  Stream<Map<dynamic, dynamic>> get _events {
+    _eventStream ??= _speechEventChannel
+        .receiveBroadcastStream()
+        .map((event) => event as Map<dynamic, dynamic>);
+    return _eventStream!;
+  }
+
+  Future<String> _language() async {
+    final prefs = await SharedPreferences.getInstance();
+    final code = prefs.getString('whisper_language') ?? 'en';
+    const map = {
+      'en': 'en-US',
+      'es': 'es-ES',
+      'fr': 'fr-FR',
+      'de': 'de-DE',
+      'it': 'it-IT',
+      'pt': 'pt-PT',
+      'nl': 'nl-NL',
+      'ru': 'ru-RU',
+      'zh': 'zh-CN',
+      'ja': 'ja-JP',
+      'ko': 'ko-KR',
+      'ar': 'ar-SA',
+      'hi': 'hi-IN',
+      'bn': 'bn-IN',
+      'ur': 'ur-PK',
+      'ta': 'ta-IN',
+      'te': 'te-IN',
+      'mr': 'mr-IN',
+      'gu': 'gu-IN',
+      'kn': 'kn-IN',
+      'ml': 'ml-IN',
+      'pa': 'pa-IN',
+      'th': 'th-TH',
+      'vi': 'vi-VN',
+      'tl': 'fil-PH',
+      'tr': 'tr-TR',
+      'fa': 'fa-IR',
+      'he': 'he-IL',
+      'sw': 'sw-KE',
+    };
+    return map[code] ?? code;
+  }
+
+  @override
+  Future<String> transcribe(Uint8List voiceData) async {
+    if (!Platform.isIOS) {
+      throw UnsupportedError(
+          'iOS native speech recognition is only available on iOS');
+    }
+    final language = await _language();
+    await _speechChannel
+        .invokeMethod('startSpeechRecognition', {'language': language});
+    await _speechChannel.invokeMethod('appendAudio', voiceData);
+    final finalText =
+        await _speechChannel.invokeMethod('stopSpeechRecognition') as String?;
+    return finalText ?? '';
+  }
+
+  @override
+  Future<void> transcribeLive(
+      Stream<Uint8List> voiceData, StreamController<String> out,
+      {bool finalOnly = false}) async {
+    if (!Platform.isIOS) {
+      throw UnsupportedError(
+          'iOS native speech recognition is only available on iOS');
+    }
+    final language = await _language();
+    await _speechChannel
+        .invokeMethod('startSpeechRecognition', {'language': language});
+
+    StreamSubscription? sub;
+    sub = _events.listen((event) {
+      final type = event['type'] as String?;
+      final text = event['text'] as String? ?? '';
+      if (type == 'partial' && !out.isClosed) {
+        out.add(text);
+      } else if (type == 'error') {
+        out.addError(Exception(text));
+      }
+    });
+
+    try {
+      await for (final chunk in voiceData) {
+        await _speechChannel.invokeMethod('appendAudio', chunk);
+      }
+      final finalText =
+          await _speechChannel.invokeMethod('stopSpeechRecognition') as String?;
+      if (finalText != null && finalText.isNotEmpty && !out.isClosed) {
+        out.add(finalText);
+      }
+    } finally {
+      await sub.cancel();
     }
   }
 }

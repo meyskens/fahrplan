@@ -49,6 +49,8 @@ class BluetoothManager {
     );
 
     notificationListener!.startListening();
+
+    _backgroundTaskChannel.setMethodCallHandler(_handleBackgroundTask);
   }
 
   FahrplanDashboard fahrplanDashboard = FahrplanDashboard();
@@ -305,10 +307,6 @@ class BluetoothManager {
           side: GlassSide.left,
         );
         await leftGlass!.connect();
-        // On iOS, also connect the native BluetoothManager for voice recognition
-        if (Platform.isIOS) {
-          _connectNativeIOS(leftGlass!.name, leftUid);
-        }
         _setReconnect(leftGlass!);
         leftConnected = true;
       } catch (e) {
@@ -326,10 +324,6 @@ class BluetoothManager {
           side: GlassSide.right,
         );
         await rightGlass!.connect();
-        // On iOS, also connect the native BluetoothManager for voice recognition
-        if (Platform.isIOS) {
-          _connectNativeIOS(rightGlass!.name, rightUid);
-        }
         _setReconnect(rightGlass!);
         rightConnected = true;
       } catch (e) {
@@ -341,8 +335,8 @@ class BluetoothManager {
 
     // If we couldn't reconnect on iOS, the stored UUIDs may be stale
     // The app should trigger a scan when user opens it
-    if (Platform.isIOS && (!leftConnected || !rightConnected)) {
-      debugPrint('iOS: Some glasses could not reconnect from stored UUIDs. '
+    if (!leftConnected || !rightConnected) {
+      debugPrint('Some glasses could not reconnect from stored UUIDs. '
           'Will need fresh scan when app is foregrounded.');
     }
   }
@@ -426,10 +420,6 @@ class BluetoothManager {
     });
   }
 
-  // iOS native method channel for Bluetooth operations
-  static const MethodChannel _iosBluetoothChannel =
-      MethodChannel('dev.maartje.fahrplan/bluetooth');
-
   void _handleDeviceFound(ScanResult result, OnUpdate onUpdate) async {
     String deviceName = result.device.name;
     Glass? glass;
@@ -456,12 +446,6 @@ class BluetoothManager {
     }
     if (glass != null) {
       await glass.connect();
-
-      // On iOS, also connect the native BluetoothManager for voice recognition
-      if (Platform.isIOS) {
-        _connectNativeIOS(deviceName, glass.device.id.id);
-      }
-
       _setReconnect(glass);
     }
 
@@ -473,41 +457,38 @@ class BluetoothManager {
     }
   }
 
-  Future<void> _connectNativeIOS(String deviceName, String deviceId) async {
+  void _setReconnect(Glass glass) {
+    // The Glass class already installs its own connection listener with
+    // exponential-backoff reconnect. This listener is kept for logging.
+    glass.device.connectionState.listen((BluetoothConnectionState state) {
+      debugPrint('[${glass.side} Glass] Connection state: $state');
+    });
+  }
+
+  // iOS background processing task channel (BGTaskScheduler -> Dart).
+  static const MethodChannel _backgroundTaskChannel =
+      MethodChannel('dev.maartje.fahrplan/background_tasks');
+
+  Future<dynamic> _handleBackgroundTask(MethodCall call) async {
+    if (call.method != 'onBackgroundTask') return null;
     try {
-      debugPrint(
-          'Connecting native iOS BluetoothManager for $deviceName (ID: $deviceId)');
-      // Pass the device UUID directly - native iOS can retrieve the peripheral by UUID
-      await _iosBluetoothChannel.invokeMethod('connectToDevice', {
-        'deviceName': deviceId,
-      });
+      await _backgroundHeartbeat();
+      return true;
     } catch (e) {
-      debugPrint('Failed to connect native iOS BluetoothManager: $e');
+      debugPrint('Background heartbeat failed: $e');
+      return false;
     }
   }
 
-  void _setReconnect(Glass glass) {
-    // Note: On iOS, autoConnect handles reconnection automatically
-    // This listener is mainly for logging and handling edge cases
-    glass.device.connectionState.listen((BluetoothConnectionState state) {
-      debugPrint('[${glass.side} Glass] Connection state: $state');
-      if (state == BluetoothConnectionState.disconnected) {
-        debugPrint(
-            '[${glass.side} Glass] Disconnected, attempting to reconnect...');
-        // On Android, we need to manually reconnect
-        // On iOS, autoConnect handles this, but we retry anyway for robustness
-        if (Platform.isAndroid) {
-          glass.connect();
-        } else {
-          // On iOS, give autoConnect a moment, then check if we need to reconnect
-          Future.delayed(const Duration(seconds: 3), () {
-            if (!glass.device.isConnected) {
-              glass.connect();
-            }
-          });
-        }
-      }
-    });
+  Future<void> _backgroundHeartbeat() async {
+    debugPrint('Running background heartbeat');
+    if (leftGlass == null && rightGlass == null) {
+      // No glasses object yet; try to reconnect from saved UUIDs.
+      await attemptReconnectFromStorage();
+      return;
+    }
+    await leftGlass?.heartbeatOrReconnect();
+    await rightGlass?.heartbeatOrReconnect();
   }
 
   void _handleScanTimeout(OnUpdate onUpdate) async {

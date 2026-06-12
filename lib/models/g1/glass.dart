@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:fahrplan/models/g1/commands.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'dart:async';
 import '../../services/bluetooth_reciever.dart';
@@ -69,6 +68,9 @@ class Glass {
       // Start reactive heartbeat - works in background on iOS by piggybacking on incoming packets
       startReactiveHeartbeat();
 
+      // Keep a watchdog that detects stale connections and reconnects.
+      startConnectionWatchdog();
+
       // Set up connection state listener for auto-reconnect
       _setupConnectionListener();
     } catch (e) {
@@ -81,16 +83,8 @@ class Glass {
     _connectionSubscription = device.connectionState.listen((state) {
       debugPrint('[$side Glass] Connection state: $state');
       if (state == BluetoothConnectionState.disconnected) {
-        debugPrint('[$side Glass] Disconnected, will auto-reconnect if needed');
-        // On iOS, autoConnect handles reconnection automatically
-        // On Android, we may need to trigger reconnect
-        if (Platform.isAndroid) {
-          Future.delayed(const Duration(seconds: 2), () {
-            if (!device.isConnected) {
-              connect();
-            }
-          });
-        }
+        debugPrint('[$side Glass] Disconnected, attempting reconnect');
+        _reconnectWithBackoff();
       }
     });
   }
@@ -181,29 +175,7 @@ class Glass {
     }
   }
 
-  // iOS native method channel for sending data when flutter_blue_plus doesn't work reliably
-  static const MethodChannel _iosBluetoothChannel =
-      MethodChannel('dev.maartje.fahrplan/bluetooth');
-
   Future<void> sendData(List<int> data) async {
-    // On iOS, use the native method channel if available
-    if (Platform.isIOS) {
-      try {
-        final lr = side == GlassSide.left ? 'L' : 'R';
-        // Native method returns immediately (fire-and-forget like EvenDemoApp)
-        await _iosBluetoothChannel.invokeMethod('sendData', {
-          'data': Uint8List.fromList(data),
-          'lr': lr,
-        });
-        _lastActivityTime = DateTime.now();
-        return;
-      } catch (e) {
-        debugPrint(
-            'iOS native send failed, falling back to flutter_blue_plus: $e');
-        // Fall through to flutter_blue_plus if native method fails
-      }
-    }
-
     if (uartTx != null) {
       try {
         await uartTx!.write(data, withoutResponse: false);
@@ -224,24 +196,6 @@ class Glass {
     if (data.isEmpty) {
       debugPrint('Cannot send empty data');
       return;
-    }
-
-    // On iOS, use the native method channel if available
-    if (Platform.isIOS) {
-      try {
-        final lr = side == GlassSide.left ? 'L' : 'R';
-        // Native method now waits for BLE write completion (like Android's withoutResponse: false)
-        await _iosBluetoothChannel.invokeMethod('sendData', {
-          'data': Uint8List.fromList(data),
-          'lr': lr,
-        });
-        _lastActivityTime = DateTime.now();
-        return;
-      } catch (e) {
-        debugPrint(
-            'iOS native send failed, falling back to flutter_blue_plus: $e');
-        // Fall through to flutter_blue_plus if native method fails
-      }
     }
 
     if (uartTx == null) {
@@ -287,14 +241,14 @@ class Glass {
     ];
   }
 
-  /// Reactive heartbeat that works in iOS background
-  /// Uses incoming BLE notifications to trigger heartbeats instead of timers
+  /// Best-effort periodic heartbeat. Android's foreground service keeps Dart
+  /// running so the timer fires reliably. iOS timers are suspended in the
+  /// background, so iOS also relies on reactive heartbeats and the
+  /// BGProcessingTask scheduled from AppDelegate.
   void startReactiveHeartbeat() {
     // Cancel any existing timer
     heartbeatTimer?.cancel();
 
-    // On Android, we can use a timer since background execution is more permissive
-    // On iOS, we rely on reactive heartbeats triggered by incoming notifications
     if (Platform.isAndroid) {
       const heartbeatInterval = Duration(seconds: 5);
       heartbeatTimer = Timer.periodic(heartbeatInterval, (timer) async {
@@ -302,9 +256,62 @@ class Glass {
           _sendHeartbeatPacket();
         }
       });
+    } else if (Platform.isIOS) {
+      // iOS: keep a timer for foreground / short background windows.
+      const heartbeatInterval = Duration(seconds: 25);
+      heartbeatTimer = Timer.periodic(heartbeatInterval, (timer) async {
+        if (device.isConnected) {
+          _sendHeartbeatPacket();
+        }
+      });
     }
-    // On iOS, heartbeats are sent reactively when we receive notifications
-    // This works because incoming BLE packets wake the app for ~10 seconds
+  }
+
+  /// Sends a heartbeat if connected, otherwise attempts to reconnect.
+  /// Called from the iOS background task and the watchdog.
+  Future<void> heartbeatOrReconnect() async {
+    if (device.isConnected) {
+      _sendHeartbeatPacket();
+    } else {
+      await _reconnectWithBackoff();
+    }
+  }
+
+  static const Duration _connectionWatchdogTimeout = Duration(seconds: 35);
+  Timer? _watchdogTimer;
+
+  void startConnectionWatchdog() {
+    _watchdogTimer?.cancel();
+    _watchdogTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _watchdogCheck();
+    });
+  }
+
+  void _watchdogCheck() {
+    if (!device.isConnected) return;
+    final elapsed = DateTime.now().difference(_lastActivityTime);
+    if (elapsed > _connectionWatchdogTimeout) {
+      debugPrint('[$side Glass] Connection watchdog timeout, reconnecting');
+      _reconnectWithBackoff();
+    }
+  }
+
+  Future<void> _reconnectWithBackoff() async {
+    for (final delay in [
+      const Duration(seconds: 1),
+      const Duration(seconds: 3),
+      const Duration(seconds: 7),
+      const Duration(seconds: 15),
+    ]) {
+      await Future.delayed(delay);
+      if (device.isConnected) return;
+      try {
+        await connect();
+        if (device.isConnected) return;
+      } catch (e) {
+        debugPrint('[$side Glass] Reconnect attempt failed: $e');
+      }
+    }
   }
 
   Future<void> disconnect() async {
@@ -312,6 +319,7 @@ class Glass {
     await notificationSubscription?.cancel();
     await _connectionSubscription?.cancel();
     heartbeatTimer?.cancel();
+    _watchdogTimer?.cancel();
     debugPrint('Disconnected from $side glass.');
   }
 }

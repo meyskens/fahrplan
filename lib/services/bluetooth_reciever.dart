@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:fahrplan/models/fahrplan/widgets/homassistant.dart';
 import 'package:fahrplan/models/g1/glass.dart';
@@ -30,11 +29,11 @@ class BluetoothReciever {
 
   int _syncId = 0;
 
-  // iOS Event Channels for receiving data from native Bluetooth manager
-  static const EventChannel _blueInfoChannel =
-      EventChannel('dev.maartje.fahrplan/blue_info');
-  static const EventChannel _blueSpeechChannel =
-      EventChannel('dev.maartje.fahrplan/blue_speech');
+  // iOS native speech recognition channels (optional live dictation engine).
+  static const MethodChannel _iosSpeechChannel =
+      MethodChannel('dev.maartje.fahrplan/speech');
+  static const EventChannel _iosSpeechEventChannel =
+      EventChannel('dev.maartje.fahrplan/speech_events');
 
   factory BluetoothReciever() {
     return singleton;
@@ -49,49 +48,53 @@ class BluetoothReciever {
       },
     );
 
-    // Setup iOS event channel listeners for native Bluetooth data
+    // Setup iOS native speech recognition result listener
     if (Platform.isIOS) {
-      _setupIOSEventChannels();
+      _setupIOSSpeechEventChannel();
     }
   }
 
-  void _setupIOSEventChannels() {
-    // Listen to blue info events (button presses, commands from glasses)
-    _blueInfoChannel.receiveBroadcastStream().listen(
+  void _setupIOSSpeechEventChannel() {
+    _iosSpeechEventChannel.receiveBroadcastStream().listen(
       (dynamic event) {
         if (event is Map) {
-          final data = event['data'];
-          final lr = event['lr'] as String?;
-          if (data != null && lr != null) {
-            final side = lr == 'L' ? GlassSide.left : GlassSide.right;
-            final dataList = (data as List).cast<int>();
-            receiveHandler(side, dataList);
+          final type = event['type'] as String?;
+          if (type == 'final') {
+            final script = event['text'] as String?;
+            if (script != null) {
+              debugPrint('Received final speech from iOS native: $script');
+              _handleIOSSpeechTranscription(script);
+            }
           }
         }
       },
       onError: (dynamic error) {
-        debugPrint('Blue info event channel error: $error');
+        debugPrint('iOS speech event channel error: $error');
       },
     );
+  }
 
-    // Listen to blue speech events (transcribed speech from glasses)
-    _blueSpeechChannel.receiveBroadcastStream().listen(
-      (dynamic event) {
-        if (event is Map) {
-          final script = event['script'] as String?;
-          if (script != null) {
-            debugPrint('Received speech from iOS native: $script');
-            // Handle the transcribed speech
-            _handleIOSSpeechTranscription(script);
-          }
-        }
-      },
-      onError: (dynamic error) {
-        debugPrint('Blue speech event channel error: $error');
-      },
-    );
+  Future<void> _controlNativeSpeechRecognition(bool active,
+      {String identifier = 'EN'}) async {
+    if (!Platform.isIOS) return;
+    try {
+      if (active) {
+        await _iosSpeechChannel.invokeMethod('startSpeechRecognition', {
+          'language': identifier,
+        });
+      } else {
+        await _iosSpeechChannel.invokeMethod('stopSpeechRecognition');
+      }
+    } catch (e) {
+      debugPrint('Native speech recognition control failed: $e');
+    }
+  }
 
-    debugPrint('iOS Bluetooth event channels initialized');
+  void _feedNativeSpeechData(List<int> lc3Data) {
+    if (!Platform.isIOS || lc3Data.isEmpty) return;
+    _iosSpeechChannel
+        .invokeMethod('appendLC3Audio', {'data': Uint8List.fromList(lc3Data)})
+        .catchError((e) => debugPrint('appendLC3Audio error: $e'));
   }
 
   void _handleIOSSpeechTranscription(String transcription) async {
@@ -154,14 +157,18 @@ class BluetoothReciever {
 
         voiceCollectorWakeWord.isRecording = false;
         voiceCollectorWakeWord.reset();
+
+        await _controlNativeSpeechRecognition(false);
         break;
       case 1:
-        debugPrint('[$side] Page ${side == 'left' ? 'up' : 'down'} control');
+        debugPrint('[$side] Page ${side == GlassSide.left ? 'up' : 'down'} control');
         await bt.setMicrophone(false);
         voiceCollectorAI.isRecording = false;
 
         voiceCollectorWakeWord.isRecording = false;
         voiceCollectorWakeWord.reset();
+
+        await _controlNativeSpeechRecognition(false);
         break;
       case 2:
         debugPrint('[$side] Start wake word detection');
@@ -171,6 +178,8 @@ class BluetoothReciever {
         debugPrint('[$side] Stop wake word detection');
         voiceCollectorWakeWord.isRecording = false;
         voiceCollectorWakeWord.reset();
+
+        await _controlNativeSpeechRecognition(false);
         break;
       case 23:
         debugPrint('[$side] Start Even AI');
@@ -178,6 +187,7 @@ class BluetoothReciever {
         voiceCollectorWakeWord.reset();
 
         voiceCollectorAI.isRecording = true;
+        await _controlNativeSpeechRecognition(true);
         await bt.setMicrophone(true);
         break;
       case 24:
@@ -187,6 +197,7 @@ class BluetoothReciever {
 
         voiceCollectorAI.isRecording = false;
         await bt.setMicrophone(false);
+        await _controlNativeSpeechRecognition(false);
 
         List<int> completeVoiceData = voiceCollectorAI.getAllData();
         if (completeVoiceData.isEmpty) {
@@ -236,6 +247,9 @@ class BluetoothReciever {
     //    '[$side] Received voice data chunk: seq=$seq, length=${voiceData.length}');
     if (voiceCollectorAI.isRecording) {
       voiceCollectorAI.addChunk(seq, voiceData);
+      if (Platform.isIOS) {
+        _feedNativeSpeechData(voiceData);
+      }
     } else if (voiceCollectorWakeWord.isRecording) {
       voiceCollectorWakeWord.addChunk(seq, voiceData);
     }

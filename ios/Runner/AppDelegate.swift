@@ -1,15 +1,14 @@
 import Flutter
 import UIKit
-import AVFoundation
+import BackgroundTasks
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
-  var audioPlayer: AVAudioPlayer?
-  var backgroundAudioEnabled = false
-  var settingsChannel: FlutterMethodChannel?
-  var bluetoothChannel: FlutterMethodChannel?
-  var blueInfoChannel: FlutterEventChannel?
-  var blueSpeechChannel: FlutterEventChannel?
+  private let backgroundTaskIdentifier = "dev.maartje.fahrplan.heartbeat"
+
+  var speechChannel: FlutterMethodChannel?
+  var speechEventChannel: FlutterEventChannel?
+  var backgroundTaskChannel: FlutterMethodChannel?
 
   override func application(
     _ application: UIApplication,
@@ -18,29 +17,15 @@ import AVFoundation
     // Register plugins early for BLE state restoration
     GeneratedPluginRegistrant.register(with: self)
 
-    // Setup method channel for settings communication
+    // Register background processing task for heartbeat/reconnect
+    BGTaskScheduler.shared.register(forTaskWithIdentifier: backgroundTaskIdentifier, using: nil) { [weak self] task in
+      self?.handleBackgroundTask(task as! BGProcessingTask)
+    }
+
     if let controller = window?.rootViewController as? FlutterViewController {
-      settingsChannel = FlutterMethodChannel(name: "dev.maartje.fahrplan/settings",
-                                              binaryMessenger: controller.binaryMessenger)
-      settingsChannel?.setMethodCallHandler { [weak self] (call, result) in
-        if call.method == "setBackgroundAudioEnabled" {
-          if let args = call.arguments as? [String: Any],
-             let enabled = args["enabled"] as? Bool {
-            self?.backgroundAudioEnabled = enabled
-          }
-          result(nil)
-        } else if call.method == "isBackgroundAudioEnabled" {
-          result(self?.backgroundAudioEnabled ?? false)
-        } else {
-          result(FlutterMethodNotImplemented)
-        }
-      }
-
-      // Setup Bluetooth method channel for sending data to glasses
-      setupBluetoothMethodChannel(controller: controller)
-
-      // Setup event channels for Bluetooth data from glasses
-      setupBluetoothEventChannels(controller: controller)
+      setupSpeechMethodChannel(controller: controller)
+      setupSpeechEventChannels(controller: controller)
+      setupBackgroundTaskChannel(controller: controller)
 
       // Setup WeatherKit for weather updates (iOS 16.0+)
       if #available(iOS 16.0, *) {
@@ -48,106 +33,121 @@ import AVFoundation
       }
     }
 
+    // Schedule the first heartbeat task; it will reschedule itself.
+    scheduleBackgroundTask()
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
-  private func setupBluetoothMethodChannel(controller: FlutterViewController) {
-    bluetoothChannel = FlutterMethodChannel(name: "dev.maartje.fahrplan/bluetooth",
-                                           binaryMessenger: controller.binaryMessenger)
-    bluetoothChannel?.setMethodCallHandler { [weak self] (call, result) in
+  override func applicationDidEnterBackground(_ application: UIApplication) {
+    scheduleBackgroundTask()
+  }
+
+  private func setupSpeechMethodChannel(controller: FlutterViewController) {
+    speechChannel = FlutterMethodChannel(name: "dev.maartje.fahrplan/speech",
+                                         binaryMessenger: controller.binaryMessenger)
+    speechChannel?.setMethodCallHandler { (call, result) in
       switch call.method {
-      case "startScan":
-        BluetoothManager.shared.startScan(result: result)
-      case "stopScan":
-        BluetoothManager.shared.stopScan(result: result)
-      case "connectToDevice":
+      case "startSpeechRecognition":
         if let args = call.arguments as? [String: Any],
-           let deviceName = args["deviceName"] as? String {
-          BluetoothManager.shared.connectToDevice(deviceName: deviceName, result: result)
+           let language = args["language"] as? String {
+          SpeechStreamRecognizer.shared.startRecognition(identifier: language)
+          result(nil)
         } else {
-          result(FlutterError(code: "InvalidArgs", message: "deviceName required", details: nil))
+          result(FlutterError(code: "InvalidArgs", message: "language required", details: nil))
         }
-      case "disconnectFromGlasses":
-        BluetoothManager.shared.disconnectFromGlasses(result: result)
-      case "sendData":
-        if let args = call.arguments as? [String: Any] {
-          BluetoothManager.shared.sendData(params: args, result: result)
+      case "appendAudio":
+        if let audioData = call.arguments as? FlutterStandardTypedData {
+          SpeechStreamRecognizer.shared.appendPCMData(audioData.data)
+          result(nil)
         } else {
-          result(FlutterError(code: "InvalidArgs", message: "data required", details: nil))
+          result(FlutterError(code: "InvalidArgs", message: "audio data required", details: nil))
+        }
+      case "appendLC3Audio":
+        if let audioData = call.arguments as? FlutterStandardTypedData {
+          let pcmConverter = PcmConverter()
+          let pcmData = pcmConverter.decode(audioData.data)
+          guard pcmData.length > 0 else {
+            result(nil)
+            return
+          }
+          SpeechStreamRecognizer.shared.appendPCMData(pcmData as Data)
+          result(nil)
+        } else {
+          result(FlutterError(code: "InvalidArgs", message: "audio data required", details: nil))
+        }
+      case "stopSpeechRecognition":
+        SpeechStreamRecognizer.shared.stopRecognition { finalText in
+          result(finalText)
         }
       default:
         result(FlutterMethodNotImplemented)
       }
     }
-
-    // Update the BluetoothManager's channel reference
-    BluetoothManager.shared.channel = bluetoothChannel
   }
 
-  private func setupBluetoothEventChannels(controller: FlutterViewController) {
-    // Blue Info Channel - for button presses and commands from glasses
-    blueInfoChannel = FlutterEventChannel(name: "dev.maartje.fahrplan/blue_info",
-                                          binaryMessenger: controller.binaryMessenger)
-    blueInfoChannel?.setStreamHandler(BlueInfoStreamHandler())
-
-    // Blue Speech Channel - for transcribed speech from glasses
-    blueSpeechChannel = FlutterEventChannel(name: "dev.maartje.fahrplan/blue_speech",
-                                            binaryMessenger: controller.binaryMessenger)
-    blueSpeechChannel?.setStreamHandler(BlueSpeechStreamHandler())
+  private func setupSpeechEventChannels(controller: FlutterViewController) {
+    speechEventChannel = FlutterEventChannel(name: "dev.maartje.fahrplan/speech_events",
+                                             binaryMessenger: controller.binaryMessenger)
+    speechEventChannel?.setStreamHandler(SpeechEventStreamHandler.shared)
   }
 
-  override func applicationDidEnterBackground(_ application: UIApplication) {
-    // Only start silent audio if enabled in settings
-    guard backgroundAudioEnabled else { return }
+  private func setupBackgroundTaskChannel(controller: FlutterViewController) {
+    backgroundTaskChannel = FlutterMethodChannel(
+      name: "dev.maartje.fahrplan/background_tasks",
+      binaryMessenger: controller.binaryMessenger
+    )
+  }
 
-    // Start silent audio keep-alive to maintain BLE connection in background
-    // This is the same technique used by the official Even app
-    do {
-      let session = AVAudioSession.sharedInstance()
-      try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
-      try session.setActive(true)
+  private func handleBackgroundTask(_ task: BGProcessingTask) {
+    // Always schedule the next task before doing work.
+    scheduleBackgroundTask()
 
-      // Create a silent audio player (1 second of silence, looped)
-      if let url = Bundle.main.url(forResource: "silence", withExtension: "mp3") {
-        audioPlayer = try AVAudioPlayer(contentsOf: url)
-        audioPlayer?.numberOfLoops = -1  // Loop indefinitely
-        audioPlayer?.volume = 0.0        // Silent
-        audioPlayer?.play()
-      }
-    } catch {
-      print("Audio keepalive error: \(error)")
+    guard let channel = backgroundTaskChannel else {
+      task.setTaskCompleted(success: false)
+      return
+    }
+
+    let timeoutWorkItem = DispatchWorkItem { [weak task] in
+      task?.setTaskCompleted(success: false)
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 25, execute: timeoutWorkItem)
+
+    channel.invokeMethod("onBackgroundTask", arguments: nil) { result in
+      timeoutWorkItem.cancel()
+      task.setTaskCompleted(success: result != nil)
     }
   }
 
-  override func applicationWillEnterForeground(_ application: UIApplication) {
-    // Stop the silent audio when returning to foreground
-    audioPlayer?.stop()
-    audioPlayer = nil
+  private func scheduleBackgroundTask() {
+    let request = BGProcessingTaskRequest(identifier: backgroundTaskIdentifier)
+    request.requiresNetworkConnectivity = false
+    request.requiresExternalPower = false
+    // iOS decides when to run; ask for the earliest possible time.
+    request.earliestBeginDate = Date(timeIntervalSinceNow: 30)
+
+    do {
+      try BGTaskScheduler.shared.submit(request)
+    } catch {
+      print(error)
+    }
   }
 }
 
-// Stream handler for Blue Info events (button presses, commands from glasses)
-class BlueInfoStreamHandler: NSObject, FlutterStreamHandler {
+// Stream handler for iOS native speech recognition partial results
+class SpeechEventStreamHandler: NSObject, FlutterStreamHandler {
+  static let shared = SpeechEventStreamHandler()
+  var sink: FlutterEventSink?
+
   func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-    BluetoothManager.shared.blueInfoSink = events
+    sink = events
+    SpeechStreamRecognizer.shared.speechEventSink = events
     return nil
   }
 
   func onCancel(withArguments arguments: Any?) -> FlutterError? {
-    BluetoothManager.shared.blueInfoSink = nil
-    return nil
-  }
-}
-
-// Stream handler for Blue Speech events (transcribed speech from glasses)
-class BlueSpeechStreamHandler: NSObject, FlutterStreamHandler {
-  func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-    BluetoothManager.shared.blueSpeechSink = events
-    return nil
-  }
-
-  func onCancel(withArguments arguments: Any?) -> FlutterError? {
-    BluetoothManager.shared.blueSpeechSink = nil
+    sink = nil
+    SpeechStreamRecognizer.shared.speechEventSink = nil
     return nil
   }
 }

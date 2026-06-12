@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:fahrplan/models/fahrplan/whispermodel.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -96,10 +98,8 @@ class WhisperSettingsPageState extends State<WhisperSettingsPage> {
     setState(() {
       _selectedMode = mode;
     });
-    if (mode == "local") {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('whisper_mode', mode);
-    }
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('whisper_mode', mode);
   }
 
   Future<void> _downloadModel() async {
@@ -279,6 +279,14 @@ class WhisperSettingsPageState extends State<WhisperSettingsPage> {
         child: Text('Save'),
       ),
     ];
+    final iosNativeOpts = [
+      Text('iOS Native Speech details:', style: TextStyle(fontSize: 18)),
+      SizedBox(height: 10),
+      Text(
+        'Uses the on-device Apple Speech framework (SFSpeechRecognizer). No model download is needed. The selected language is mapped to an iOS locale.',
+        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+      ),
+    ];
     return Scaffold(
       appBar: AppBar(
         title: Text('Whisper Settings'),
@@ -297,11 +305,16 @@ class WhisperSettingsPageState extends State<WhisperSettingsPage> {
               items: [
                 DropdownMenuItem(
                   value: "local",
-                  child: Text("Local"),
+                  child: Text("Local (Whisper)"),
                 ),
+                if (Platform.isIOS)
+                  DropdownMenuItem(
+                    value: "ios_native",
+                    child: Text("Local (iOS Native)"),
+                  ),
                 DropdownMenuItem(
                   value: "remote",
-                  child: Text("Remote"),
+                  child: Text("Remote (Whisper)"),
                 ),
                 DropdownMenuItem(
                   value: "azure",
@@ -327,7 +340,9 @@ class WhisperSettingsPageState extends State<WhisperSettingsPage> {
                 ? localOpts
                 : _selectedMode == "azure"
                     ? azureOpts
-                    : remoteOpts),
+                    : _selectedMode == "ios_native"
+                        ? iosNativeOpts
+                        : remoteOpts),
           ]),
         ),
       ),
