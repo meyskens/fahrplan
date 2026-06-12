@@ -125,6 +125,6 @@ int lc3_bwdet_get_bw(lc3_bits_t *bits,
     enum lc3_bandwidth max_bw = (enum lc3_bandwidth)sr;
     int nbits_bw = lc3_bwdet_get_nbits(sr);
 
-    *bw = nbits_bw > 0 ? lc3_get_bits(bits, nbits_bw) : LC3_BANDWIDTH_NB;
+    *bw = nbits_bw > 0 ? (enum lc3_bandwidth)lc3_get_bits(bits, nbits_bw) : LC3_BANDWIDTH_NB;
     return *bw > max_bw ? (*bw = max_bw), -1 : 0;
 }

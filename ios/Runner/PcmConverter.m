@@ -49,9 +49,9 @@ static unsigned char *outBuf;
         return [[NSMutableData alloc] init];
     }
     
-    decMem = malloc(decodeSize);
+    decMem = (void *)malloc(decodeSize);
     lc3_decoder_t lc3_decoder = lc3_setup_decoder(dtUs, srHz, 0, decMem);
-    if ((outBuf = malloc(bytesOfFrames)) == NULL) {
+    if ((outBuf = (unsigned char *)malloc(bytesOfFrames)) == NULL) {
         printf("Failed to allocate memory for outBuf\n");
         return [[NSMutableData alloc] init];
     }
@@ -65,7 +65,7 @@ static unsigned char *outBuf;
         int bytesToRead = MIN(outputByteCount, totalBytes - bytesRead);
         NSRange range = NSMakeRange(bytesRead, bytesToRead);
         NSData *subdata = [lc3data subdataWithRange:range];
-        inBuf = (unsigned char *)subdata.bytes;
+        inBuf = (unsigned char *)(void *)subdata.bytes;
         
         NSUInteger length = subdata.length;
         for (NSUInteger i = 0; i < length; ++i) {
