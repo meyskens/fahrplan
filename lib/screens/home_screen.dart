@@ -11,6 +11,7 @@ import 'package:fahrplan/screens/navigation_screen.dart';
 import 'package:fahrplan/utils/ui_perfs.dart';
 import 'package:fahrplan/widgets/current_fahrplan.dart';
 import 'package:fahrplan/widgets/glass_status.dart';
+import 'package:fahrplan/widgets/ring_status.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/bluetooth_manager.dart';
@@ -65,6 +66,7 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(16.0),
         children: [
           GlassStatus(),
+          RingStatus(),
           CurrentFahrplan(),
           ListTile(
             title: Row(
