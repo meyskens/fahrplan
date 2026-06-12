@@ -88,9 +88,8 @@ class RingManager {
     _state = R08ConnectionState.scanning;
 
     await FlutterBluePlus.startScan(
-      withServices: R08Constants.scanServiceUuids
-          .map((uuid) => Guid(uuid))
-          .toList(),
+      withServices:
+          R08Constants.scanServiceUuids.map((uuid) => Guid(uuid)).toList(),
       timeout: const Duration(seconds: 30),
       androidUsesFineLocation: true,
     );

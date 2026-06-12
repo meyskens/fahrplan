@@ -145,8 +145,7 @@ class R08Ring {
     if (!_isTapPacket(data)) return;
 
     final now = DateTime.now();
-    if (_lastTapTime != null &&
-        now.difference(_lastTapTime!) <= _tapWindow) {
+    if (_lastTapTime != null && now.difference(_lastTapTime!) <= _tapWindow) {
       _tapCount++;
     } else {
       _tapCount = 1;
