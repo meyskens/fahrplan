@@ -271,6 +271,7 @@ class BluetoothReciever {
 class VoiceDataCollector {
   final Map<int, List<int>> _chunks = {};
   int seqAdd = 0;
+  int? _lastSeq;
   final m = Mutex();
 
   bool isRecording = false;
@@ -363,9 +364,13 @@ class VoiceDataCollector {
 
   Future<void> addChunk(int seq, List<int> data) async {
     await m.acquire();
-    if (seq == 255) {
-      seqAdd += 255;
+    // The sequence byte wraps every 256 packets (~25s of audio). Detect the wrap by the
+    // counter going backwards and advance by a full 256: bumping on seq == 255 moved that
+    // packet past the whole next lap, and advancing by 255 made lap 3 overwrite lap 1.
+    if (_lastSeq != null && seq < _lastSeq! - 128) {
+      seqAdd += 256;
     }
+    _lastSeq = seq;
     _chunks[seqAdd + seq] = data;
     m.release();
 
@@ -410,6 +415,7 @@ class VoiceDataCollector {
   void reset({bool skipWakeWordCheck = false}) {
     _chunks.clear();
     seqAdd = 0;
+    _lastSeq = null;
     if (!skipWakeWordCheck) {
       _processPCMTicker?.cancel();
       _processPCMTicker = null;
